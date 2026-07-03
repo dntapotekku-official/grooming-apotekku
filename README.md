@@ -9,3 +9,5 @@ Aplikasi checklist grooming harian (audit CEO/COO) dengan penyimpanan Firebase F
 ## Cara update aplikasi
 1. Ganti isi `public/index.html` dengan versi terbaru (upload/commit ke branch `main`).
 2. GitHub Actions akan deploy otomatis (± 1 menit). Data checklist aman — tersimpan di Firestore, bukan di file ini.
+
+<!-- deploy pertama: dipicu setelah secret FIREBASE_SERVICE_ACCOUNT terpasang -->
