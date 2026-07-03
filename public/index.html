@@ -180,7 +180,13 @@ noscript .nojs-warn{display:block!important}
         <div><b style="font-size:13.5px;color:var(--ink)">apt. I Putu Cahya Swandhika Negara, S.Farm</b><div style="font-size:11.5px;color:var(--red);font-weight:700">COO ApotekKU</div></div>
       </div>
     </div>
+    <div style="text-align:left"><label>Password</label></div>
+    <div style="position:relative;margin:6px 0 18px">
+      <input type="password" id="loginPass" placeholder="Masukkan password" autocomplete="current-password" style="width:100%;padding:13px 46px 13px 14px;border:2px solid var(--line);border-radius:12px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box" onkeydown="if(event.key==='Enter'&&!document.getElementById('btnLogin').disabled)doLogin()">
+      <button type="button" aria-label="lihat password" onclick="var i=document.getElementById('loginPass');i.type=i.type==='password'?'text':'password';this.textContent=i.type==='password'?'👁':'🙈'" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);border:none;background:none;font-size:18px;cursor:pointer;padding:4px">👁</button>
+    </div>
     <button class="btn" style="width:100%" id="btnLogin" onclick="doLogin()" disabled>🔐 Masuk sebagai Auditor</button>
+    <div style="margin-top:12px;text-align:right"><a href="#" onclick="changePass();return false" style="font-size:12px;color:var(--red);font-weight:700;text-decoration:none">🔑 Ubah Password</a></div>
     <div style="font-size:11px;color:var(--muted);margin-top:14px">Nama auditor akan tercatat pada setiap checklist yang disimpan.<br>Data checklist tersinkron otomatis melalui Firebase (Firestore) dan dapat dilihat oleh semua auditor secara real-time.</div>
   </div>
 </div>
@@ -339,6 +345,34 @@ const AUDITORS = [
   {id:'coo', nama:'apt. I Putu Cahya Swandhika Negara, S.Farm', jabatan:'COO ApotekKU'}
 ];
 const KEY_AUD = 'apotekku_grooming_auditor';
+const KEY_PASS = 'apotekku_grooming_pass';
+const DEFAULT_PASS = 'apotekku';
+async function getPassMap(){
+  try{
+    if(FB){ const d = await FB.collection('grooming').doc('meta-pass').get(); return d.exists? (d.data()||{}) : {}; }
+    if(IS_CLOUD){ return (await cloudLoad('grooming-pass', true))||{}; }
+    return store.get(KEY_PASS)||{};
+  }catch(e){ return {}; }
+}
+async function setPassMap(p){
+  if(FB){ await FB.collection('grooming').doc('meta-pass').set(p); return; }
+  if(IS_CLOUD){ cloudSave('grooming-pass', p, true); return; }
+  store.set(KEY_PASS, p);
+}
+async function changePass(){
+  if(!pickedAuditor){ toast('Pilih auditor terlebih dahulu','err'); return; }
+  const a = AUDITORS.find(x=>x.id===pickedAuditor);
+  const pm = await getPassMap();
+  const cur = prompt('Ubah password '+a.jabatan+'\n\nMasukkan password LAMA:'); if(cur===null) return;
+  if(cur !== (pm[pickedAuditor]||DEFAULT_PASS)){ toast('Password lama salah','err'); return; }
+  const nw = prompt('Masukkan password BARU (min. 4 karakter):'); if(nw===null) return;
+  if(nw.trim().length<4){ toast('Password baru minimal 4 karakter','err'); return; }
+  const nw2 = prompt('Ulangi password baru:'); if(nw2===null) return;
+  if(nw!==nw2){ toast('Konfirmasi password tidak sama','err'); return; }
+  pm[pickedAuditor] = nw.trim();
+  try{ await setPassMap(pm); toast('Password '+a.jabatan+' berhasil diubah','ok'); }
+  catch(e){ toast('Gagal menyimpan password — periksa koneksi','err'); }
+}
 let pickedAuditor = null;
 function currentAuditor(){ return CACHE.auditor; }
 function setAuditor(id){
@@ -358,8 +392,16 @@ function pickAuditor(id){
   });
   document.getElementById('btnLogin').disabled = false;
 }
-function doLogin(){
+async function doLogin(){
   if(!pickedAuditor) return;
+  const inp = document.getElementById('loginPass');
+  const btn = document.getElementById('btnLogin');
+  btn.disabled = true; btn.textContent = 'Memeriksa...';
+  const pm = await getPassMap();
+  const ok = (inp.value||'') === (pm[pickedAuditor]||DEFAULT_PASS);
+  btn.disabled = false; btn.textContent = '🔐 Masuk sebagai Auditor';
+  if(!ok){ toast('Password salah','err'); inp.focus(); inp.select(); return; }
+  inp.value = '';
   setAuditor(pickedAuditor);
   applyAuth();
   toast('Login berhasil — Auditor: '+AUDITORS.find(a=>a.id===pickedAuditor).jabatan,'ok');
@@ -367,6 +409,7 @@ function doLogin(){
 function doLogout(){
   setAuditor(null);
   pickedAuditor = null;
+  const lp=document.getElementById('loginPass'); if(lp){ lp.value=''; lp.type='password'; }
   document.getElementById('btnLogin').disabled = true;
   renderLogin();
   applyAuth();
