@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Checklist Grooming SSC ApotekKU</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<style>
+:root{
+  --red:#C8102E; --red-dark:#8E0B20; --red-deep:#5C0713; --red-soft:#FDECEF;
+  --red-mid:#F5C6CE; --ink:#2B1A1D; --muted:#8A6B70; --paper:#FFF9F8;
+  --card:#FFFFFF; --ok:#1E8E4E; --ok-soft:#E7F6ED; --warn:#C8102E; --warn-soft:#FDECEF;
+  --gold:#E8A33D; --line:#F0DCDF; --radius:14px;
+  --shadow:0 2px 10px rgba(139,16,40,.08);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--paper);color:var(--ink);font-size:14px;min-height:100vh}
+/* ===== HEADER ===== */
+header{background:linear-gradient(135deg,var(--red) 0%,var(--red-dark) 70%,var(--red-deep) 100%);color:#fff;padding:18px 24px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;box-shadow:0 3px 14px rgba(140,10,30,.35)}
+.logo-badge{width:52px;height:46px;background:#fff;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;padding:6px}
+header h1{font-size:19px;font-weight:800;letter-spacing:.4px;line-height:1.2}
+header .sub{font-size:11.5px;opacity:.88;font-weight:400;letter-spacing:.6px;text-transform:uppercase}
+.header-right{margin-left:auto;text-align:right;font-size:12px;opacity:.92}
+.header-right b{font-size:14px}
+/* ===== NAV ===== */
+nav{background:#fff;display:flex;gap:4px;padding:8px 20px;border-bottom:2px solid var(--line);position:sticky;top:0;z-index:50;overflow-x:auto}
+nav button{border:none;background:transparent;padding:10px 18px;font-size:13.5px;font-weight:600;color:var(--muted);cursor:pointer;border-radius:10px;white-space:nowrap;transition:.15s}
+nav button:hover{background:var(--red-soft);color:var(--red)}
+nav button.active{background:var(--red);color:#fff;box-shadow:0 2px 8px rgba(200,16,46,.3)}
+main{max-width:1180px;margin:0 auto;padding:22px 18px 60px}
+.page{display:none}.page.show{display:block;animation:fadein .25s}
+@keyframes fadein{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+/* ===== CARDS & CONTROLS ===== */
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);margin-bottom:16px}
+.card h2{font-size:16px;color:var(--red-dark);margin-bottom:4px}
+.card .hint{font-size:12px;color:var(--muted);margin-bottom:12px}
+label{font-size:12px;font-weight:700;color:var(--muted);display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px}
+select,input[type=date],input[type=text],input[type=month],textarea{width:100%;padding:9px 12px;border:1.5px solid var(--line);border-radius:10px;font-size:13.5px;background:#fff;color:var(--ink);font-family:inherit}
+select:focus,input:focus,textarea:focus{outline:none;border-color:var(--red)}
+.grid{display:grid;gap:12px}
+.g3{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+.btn{background:var(--red);color:#fff;border:none;padding:11px 22px;font-size:14px;font-weight:700;border-radius:10px;cursor:pointer;transition:.15s;font-family:inherit}
+.btn:hover{background:var(--red-dark)}
+.btn.ghost{background:#fff;color:var(--red);border:1.5px solid var(--red)}
+.btn.ghost:hover{background:var(--red-soft)}
+.btn.small{padding:7px 14px;font-size:12.5px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+/* day banner */
+.day-banner{display:flex;align-items:center;gap:12px;background:linear-gradient(120deg,var(--red-soft),#fff);border:1.5px dashed var(--red-mid);border-radius:12px;padding:12px 16px;margin:12px 0}
+.day-banner .icon{font-size:26px}
+.day-banner b{color:var(--red-dark)}
+.day-banner small{display:block;color:var(--muted);margin-top:2px}
+/* checklist items */
+.chk-item{display:flex;align-items:center;gap:12px;padding:13px 14px;border:1.5px solid var(--line);border-radius:12px;margin-bottom:9px;background:#fff;transition:.15s}
+.chk-item.v-ok{border-color:var(--ok);background:var(--ok-soft)}
+.chk-item.v-no{border-color:var(--warn);background:var(--warn-soft)}
+.chk-num{width:30px;height:30px;background:var(--red);color:#fff;border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0}
+.chk-body{flex:1;min-width:0}
+.chk-body b{font-size:13.5px}
+.chk-body small{display:block;color:var(--muted);font-size:11.5px;margin-top:1px}
+.chk-rule{font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:99px;white-space:nowrap}
+.rule-harus{background:var(--ok-soft);color:var(--ok)}
+.rule-tidak{background:var(--warn-soft);color:var(--warn)}
+.rule-boleh{background:#FDF3E3;color:#A8700F}
+.seg{display:flex;border:1.5px solid var(--line);border-radius:10px;overflow:hidden;flex-shrink:0}
+.seg button{border:none;background:#fff;padding:8px 13px;font-size:12px;font-weight:700;cursor:pointer;color:var(--muted);font-family:inherit}
+.seg button.on-ok{background:var(--ok);color:#fff}
+.seg button.on-no{background:var(--warn);color:#fff}
+/* summary strip */
+.sum-strip{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0}
+.sum-box{flex:1;min-width:130px;background:#fff;border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;text-align:center}
+.sum-box .val{font-size:22px;font-weight:800;color:var(--red-dark)}
+.sum-box .lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-top:2px}
+.sum-box.denda .val{color:var(--warn)}
+.sum-box.ok .val{color:var(--ok)}
+/* stat cards dashboard */
+.stat{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow)}
+.stat .big{font-size:26px;font-weight:800;color:var(--red-dark)}
+.stat .lbl{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.stat.red .big{color:var(--warn)}
+.stat.green .big{color:var(--ok)}
+/* bars */
+.bar-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.bar-row .bl{width:180px;font-size:12px;font-weight:600;text-align:right;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar-track{flex:1;background:var(--red-soft);border-radius:99px;height:20px;position:relative;overflow:hidden}
+.bar-fill{height:100%;background:linear-gradient(90deg,var(--red),var(--red-dark));border-radius:99px;display:flex;align-items:center;justify-content:flex-end;padding-right:8px;color:#fff;font-size:10.5px;font-weight:700;min-width:26px;transition:width .4s}
+/* tables */
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{background:var(--red);color:#fff;padding:9px 10px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.4px;position:sticky;top:0}
+th:first-child{border-radius:9px 0 0 0}th:last-child{border-radius:0 9px 0 0}
+td{padding:8px 10px;border-bottom:1px solid var(--line)}
+tr:hover td{background:var(--red-soft)}
+.tbl-wrap{overflow:auto;max-height:520px;border-radius:9px;border:1px solid var(--line)}
+.pill{padding:2.5px 9px;border-radius:99px;font-size:10.5px;font-weight:700;display:inline-block}
+.pill.p{background:#FDE8F0;color:#B0246A}.pill.l{background:#E5EEFA;color:#1F5CA8}
+.pill.ok{background:var(--ok-soft);color:var(--ok)}
+.pill.no{background:var(--warn-soft);color:var(--warn)}
+.pill.neutral{background:#F1EAEB;color:var(--muted)}
+.denda-txt{color:var(--warn);font-weight:800}
+/* toast */
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--ink);color:#fff;padding:12px 22px;border-radius:12px;font-size:13.5px;font-weight:600;opacity:0;transition:.3s;z-index:99;box-shadow:0 6px 24px rgba(0,0,0,.25)}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+#toast.ok{background:var(--ok)}#toast.err{background:var(--warn)}
+.empty-note{text-align:center;color:var(--muted);padding:34px 10px;font-size:13px}
+.empty-note .big-ico{font-size:36px;margin-bottom:8px}
+.flex-between{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.storage-warn{background:#FFF6E5;border:1.5px solid #F0C97A;color:#7A5A12;border-radius:10px;padding:10px 14px;font-size:12px;margin-bottom:14px;display:none}
+@media(max-width:640px){
+  .chk-item{flex-wrap:wrap}.seg{margin-left:42px}
+  .bar-row .bl{width:110px}
+  header h1{font-size:16px}
+}
+
+/* ===== MOBILE / TOUCH FIXES ===== */
+button, select, input, .pill, .chk-item, [onclick]{touch-action:manipulation;-webkit-tap-highlight-color:rgba(200,16,46,.15)}
+button{-webkit-appearance:none;appearance:none}
+@media(max-width:640px){
+  select,input[type=date],input[type=text],input[type=month],textarea{font-size:16px;padding:12px 14px} /* cegah auto-zoom iOS */
+  nav button{padding:12px 16px;font-size:14px}
+  .btn{padding:14px 20px;font-size:15px;width:100%}
+  .btn.small{width:auto}
+  .seg{width:100%;margin-left:0;margin-top:8px}
+  .seg button{flex:1;padding:13px 8px;font-size:14px;min-height:46px}
+  .chk-item{flex-wrap:wrap;padding:14px}
+  .chk-body{flex:1 1 calc(100% - 46px)}
+  .sum-box .val{font-size:18px}
+  main{padding:14px 10px 80px}
+  .flex-between{flex-direction:column;align-items:stretch}
+  .flex-between > div{width:100%}
+  th,td{padding:10px 8px}
+  .pill{padding:6px 12px;font-size:12px}
+}
+noscript .nojs-warn{display:block!important}
+
+/* ===== SEARCHABLE DROPDOWN ===== */
+.dd{position:relative}
+.dd-btn{width:100%;display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 12px;border:1.5px solid var(--line);border-radius:10px;background:#fff;font-size:13.5px;font-family:inherit;cursor:pointer;text-align:left;color:var(--ink);min-height:44px}
+.dd-btn:focus{outline:none;border-color:var(--red)}
+.dd-btn .dd-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+.dd-caret{color:var(--red);font-size:11px;flex-shrink:0}
+.dd-panel{display:none;position:absolute;top:100%;left:0;right:0;z-index:70;background:#fff;border:1.5px solid var(--red);border-radius:12px;margin-top:4px;box-shadow:0 12px 32px rgba(140,10,30,.22);overflow:hidden}
+.dd-panel.open{display:block}
+.dd-panel > input{border:none!important;border-bottom:1.5px solid var(--line)!important;border-radius:0!important}
+.dd-list{max-height:270px;overflow:auto;-webkit-overflow-scrolling:touch}
+.dd-item{padding:12px 14px;cursor:pointer;border-bottom:1px solid var(--line);font-size:13px;min-height:48px;display:flex;align-items:center;gap:10px}
+.dd-item:last-child{border-bottom:none}
+.dd-item:hover,.dd-item:active{background:var(--red-soft)}
+.dd-item.sel{background:var(--red-soft);border-left:4px solid var(--red);font-weight:700}
+.dd-item small{color:var(--muted);font-size:11px;display:block}
+.dd-empty{padding:16px;text-align:center;color:var(--muted);font-size:12.5px}
+@media(max-width:640px){ .dd-btn{min-height:50px;font-size:14px} .dd-item{min-height:52px} }
+</style>
+</head>
+<body>
+<noscript><div class="nojs-warn" style="background:#C8102E;color:#fff;padding:16px;text-align:center;font-weight:700;font-size:14px">⚠️ JavaScript tidak aktif / file dibuka di penampil HTML bawaan HP.<br><span style="font-weight:400;font-size:12.5px">Buka file ini dengan <b>Google Chrome</b>: tekan lama file → Buka dengan → Chrome.</span></div></noscript>
+<div id="jsCheck" style="background:#8E0B20;color:#fff;padding:14px 16px;font-size:12.5px;line-height:1.6">
+<b style="font-size:14px">⚠️ Aplikasi belum aktif — file ini sedang dibuka di mode pratinjau (preview), bukan browser.</b><br>
+📱 <b>iPhone:</b> pratinjau Files/WhatsApp (tombol "Selesai" di atas) TIDAK bisa menjalankan aplikasi. Install aplikasi gratis <b>"Documents by Readdle"</b> di App Store → buka file ini dari sana. Atau gunakan laptop/PC.<br>
+🤖 <b>Android:</b> tekan lama file → Buka dengan → <b>Chrome</b>.<br>
+💻 <b>Laptop/PC:</b> klik dua kali file → otomatis terbuka di browser (paling disarankan).</div>
+
+<!-- ================= LOGIN OVERLAY ================= -->
+<div id="loginOverlay" style="position:fixed;inset:0;background:linear-gradient(150deg,var(--red) 0%,var(--red-dark) 55%,var(--red-deep) 100%);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px">
+  <div style="background:#fff;border-radius:20px;padding:34px 30px;max-width:440px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.35);text-align:center">
+    <img src="data:image/png;base64,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" alt="Logo ApotekKU — #solusikesehatankeluarga" style="width:210px;max-width:80%;height:auto;display:block;margin:0 auto 16px">
+    <h2 style="color:var(--red-dark);font-size:20px;margin-bottom:4px">GROOMING 57 TITIK APOTEKKU</h2>
+    <div style="font-size:12px;color:var(--muted);letter-spacing:.6px;text-transform:uppercase;margin-bottom:22px">Login Auditor — Checklist Grooming SSC</div>
+    <div style="text-align:left"><label>Pilih Auditor</label></div>
+    <div id="auditorList" style="display:grid;gap:10px;margin:6px 0 18px">
+      <div onclick="pickAuditor('ceo')" id="aud-ceo" style="border:2px solid var(--line);border-radius:14px;padding:14px 16px;cursor:pointer;display:flex;align-items:center;gap:12px;transition:.15s;text-align:left;min-height:60px">
+        <div style="width:42px;height:42px;border-radius:12px;background:var(--red-soft);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">👨‍💼</div>
+        <div><b style="font-size:13.5px;color:var(--ink)">apt. I Gede Purna Yogi Suara, S.Si</b><div style="font-size:11.5px;color:var(--red);font-weight:700">CEO ApotekKU</div></div>
+      </div>
+      <div onclick="pickAuditor('coo')" id="aud-coo" style="border:2px solid var(--line);border-radius:14px;padding:14px 16px;cursor:pointer;display:flex;align-items:center;gap:12px;transition:.15s;text-align:left;min-height:60px">
+        <div style="width:42px;height:42px;border-radius:12px;background:var(--red-soft);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">🧑‍💼</div>
+        <div><b style="font-size:13.5px;color:var(--ink)">apt. I Putu Cahya Swandhika Negara, S.Farm</b><div style="font-size:11.5px;color:var(--red);font-weight:700">COO ApotekKU</div></div>
+      </div>
+    </div>
+    <button class="btn" style="width:100%" id="btnLogin" onclick="doLogin()" disabled>🔐 Masuk sebagai Auditor</button>
+    <div style="font-size:11px;color:var(--muted);margin-top:14px">Nama auditor akan tercatat pada setiap checklist yang disimpan.<br>Data checklist tersinkron otomatis melalui Firebase (Firestore) dan dapat dilihat oleh semua auditor secara real-time.</div>
+  </div>
+</div>
+
+<header>
+  <div class="logo-badge"><img src="data:image/png;base64,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" alt="ApotekKU" style="width:34px;height:auto;display:block"></div>
+  <div>
+    <h1>GROOMING 57 TITIK APOTEKKU</h1>
+    <div class="sub">Tampil Rapi • Bersih • Profesional • Percaya Diri</div>
+  </div>
+  <div class="header-right">
+    <div>Checklist Grooming SSC <span id="cloudDot" style="background:rgba(255,255,255,.18);padding:2px 10px;border-radius:99px;font-size:10.5px;font-weight:700"></span></div>
+    <b id="hdrDate"></b>
+    <div id="hdrAuditor" style="margin-top:4px;display:none;align-items:center;gap:8px;justify-content:flex-end">
+      <span style="background:rgba(255,255,255,.18);padding:3px 12px;border-radius:99px;font-size:11.5px;font-weight:700" id="hdrAuditorName"></span>
+      <button onclick="doLogout()" style="background:#fff;color:var(--red);border:none;border-radius:99px;padding:3px 12px;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit">Keluar</button>
+    </div>
+  </div>
+</header>
+
+<nav>
+  <button class="active" data-page="checklist" onclick="go('checklist')">✅ Checklist Harian</button>
+  <button data-page="dashboard" onclick="go('dashboard')">📊 Dashboard</button>
+  <button data-page="rekap" onclick="go('rekap')">📅 Rekap Bulanan</button>
+  <button data-page="karyawan" onclick="go('karyawan')">👥 Data Karyawan</button>
+</nav>
+
+<main>
+<div class="storage-warn" id="storageWarn">⚠️ Penyimpanan browser tidak tersedia di tampilan ini — data hanya tersimpan sementara. <b>Download file HTML ini lalu buka langsung di Chrome/Edge</b> agar data tersimpan permanen setiap bulan.</div>
+
+<!-- ================= CHECKLIST ================= -->
+<div class="page show" id="page-checklist">
+  <div class="card">
+    <h2>Checklist Grooming Harian</h2>
+    <div class="hint">Pilih tanggal dan insan SSC, lalu nilai setiap titik grooming. Setiap pelanggaran dikenakan denda <b style="color:var(--warn)">Rp 20.000</b>.</div>
+    <div class="grid g3">
+      <div><label>Tanggal Pemeriksaan</label><input type="date" id="chkDate" onchange="renderChecklist()"></div>
+      <div><label>Divisi</label>
+        <input type="hidden" id="chkDivisi" value="">
+        <div class="dd">
+          <button type="button" class="dd-btn" onclick="ddToggle('Divisi')"><span class="dd-label" id="lblDivisi">— Semua Divisi —</span><span class="dd-caret">▼</span></button>
+          <div class="dd-panel" id="panelDivisi">
+            <input type="text" id="qDivisi" placeholder="🔍 Ketik untuk cari divisi..." autocomplete="off" oninput="ddRenderDivisi()">
+            <div class="dd-list" id="listDivisi"></div>
+          </div>
+        </div>
+      </div>
+      <div><label>Nama Insan SSC</label>
+        <input type="hidden" id="chkEmp" value="">
+        <div class="dd">
+          <button type="button" class="dd-btn" onclick="ddToggle('Emp')"><span class="dd-label" id="lblEmp">Pilih insan SSC...</span><span class="dd-caret">▼</span></button>
+          <div class="dd-panel" id="panelEmp">
+            <input type="text" id="qEmp" placeholder="🔍 Ketik untuk cari nama..." autocomplete="off" oninput="ddRenderEmp()">
+            <div class="dd-list" id="listEmp"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="day-banner" id="dayBanner"></div>
+  </div>
+
+  <div class="card" id="chkCard">
+    <div class="flex-between">
+      <h2 id="chkTitle">Titik Grooming</h2>
+      <span class="pill neutral" id="chkStatusPill">Belum disimpan</span>
+    </div>
+    <div class="hint">Klik <b style="color:var(--ok)">Sesuai</b> atau <b style="color:var(--warn)">Melanggar</b> pada setiap titik.</div>
+    <div id="chkItems"></div>
+    <div style="margin-top:12px"><label>Catatan (opsional)</label><textarea id="chkNote" rows="2" placeholder="Catatan tambahan pemeriksaan..."></textarea></div>
+    <div class="sum-strip">
+      <div class="sum-box ok"><div class="val" id="sumOk">0</div><div class="lbl">Sesuai</div></div>
+      <div class="sum-box denda"><div class="val" id="sumNo">0</div><div class="lbl">Pelanggaran</div></div>
+      <div class="sum-box denda"><div class="val" id="sumDenda">Rp 0</div><div class="lbl">Total Denda</div></div>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn" onclick="saveChecklist()">💾 Simpan Checklist</button>
+      <button class="btn ghost" onclick="resetChecklist()">↺ Reset</button>
+      <button class="btn ghost" onclick="deleteChecklist()" id="btnDelete" style="display:none">🗑 Hapus Data Hari Ini</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= DASHBOARD ================= -->
+<div class="page" id="page-dashboard">
+  <div class="card">
+    <div class="flex-between">
+      <div><h2>Dashboard Grooming</h2><div class="hint" style="margin:0">Ringkasan kepatuhan grooming untuk periode terpilih.</div></div>
+      <div style="min-width:180px"><label>Periode</label><input type="month" id="dashMonth" onchange="renderDashboard()"></div>
+    </div>
+  </div>
+  <div class="grid g4" id="dashStats"></div>
+  <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(340px,1fr));margin-top:16px">
+    <div class="card"><h2>Pelanggaran per Titik Grooming</h2><div class="hint">Titik yang paling sering dilanggar bulan ini</div><div id="dashByItem"></div></div>
+    <div class="card"><h2>Pelanggaran per Divisi</h2><div class="hint">Total pelanggaran per divisi</div><div id="dashByDiv"></div></div>
+  </div>
+  <div class="card" style="margin-top:16px">
+    <h2>🏆 Top 10 Pelanggaran Terbanyak</h2>
+    <div class="hint">Insan SSC dengan pelanggaran & denda tertinggi periode ini</div>
+    <div class="tbl-wrap"><table id="dashTopTbl"></table></div>
+  </div>
+</div>
+
+<!-- ================= REKAP ================= -->
+<div class="page" id="page-rekap">
+  <div class="card">
+    <div class="flex-between">
+      <div><h2>Rekap Bulanan Grooming</h2><div class="hint" style="margin:0">Rekap otomatis per bulan — pilih periode untuk melihat bulan lain. Berlaku setiap bulan.</div></div>
+      <div style="display:flex;gap:10px;align-items:end;flex-wrap:wrap">
+        <div style="min-width:170px"><label>Periode</label><input type="month" id="rekapMonth" onchange="renderRekap()"></div>
+        <button class="btn" onclick="exportExcel()">📥 Export Excel</button>
+      </div>
+    </div>
+  </div>
+  <div class="sum-strip" id="rekapSum"></div>
+  <div class="card">
+    <div class="flex-between" style="margin-bottom:10px">
+      <h2 style="margin:0">Detail per Insan SSC</h2>
+      <input type="text" id="rekapSearch" placeholder="🔍 Cari nama / divisi..." style="max-width:260px" oninput="renderRekap()">
+    </div>
+    <div class="tbl-wrap"><table id="rekapTbl"></table></div>
+  </div>
+</div>
+
+<!-- ================= KARYAWAN ================= -->
+<div class="page" id="page-karyawan">
+  <div class="card">
+    <h2>Data Karyawan SSC — Mei 2026</h2>
+    <div class="hint">Sumber: sheet "Mei 2026". Jenis kelamin ditebak otomatis dari nama — <b>klik pill P/L untuk mengoreksi</b> (memengaruhi aturan anting & makeup pada checklist).</div>
+    <input type="text" id="empSearch" placeholder="🔍 Cari nama / divisi / jabatan..." style="max-width:300px;margin-bottom:12px" oninput="renderEmpTable()">
+    <div class="tbl-wrap"><table id="empTbl"></table></div>
+  </div>
+</div>
+</main>
+
+<div id="toast"></div>
+<script>
+/* ================= DATA KARYAWAN (Sheet Mei 2026) ================= */
+const BASE_EMPLOYEES = [{"no":1,"nama":"APT. NI KETUT SUWEDARMI PUTRI, S.FARM","divisi":"INVENTORY, SUPPLY CHAIN & MERCHANDISE","jabatan":"MANAGER","status":"TETAP"},{"no":2,"nama":"I KETUT PANJI MAHARTHA","divisi":"REVENUE AND GROWH (B2C)","jabatan":"MANAGER","status":"TETAP"},{"no":3,"nama":"APT. PUTU DHYANTI PRATIWI UTAMI, S.FARM","divisi":"HUMAN GROWTH & GA","jabatan":"MANAGER","status":"TETAP"},{"no":4,"nama":"ELSA GAOTAMI","divisi":"REVENUE AND GROWH (B2B)","jabatan":"MANAGER","status":"TETAP"},{"no":5,"nama":"APT. I MADE MYASA DARMIKA, S.FARM","divisi":"NEW STORE, LEGAL & REGULASI","jabatan":"MANAGER","status":"TETAP"},{"no":6,"nama":"DEWA AYU GANDHI PRATIWI","divisi":"MARKETING, BRANDING & COSTUMER ENGAGEMENT","jabatan":"MANAGER","status":"TETAP"},{"no":7,"nama":"NI PUTU PRADNYAWATI","divisi":"FINANCE, ACCOUNTING AND TAX","jabatan":"MANAGER","status":"TETAP"},{"no":8,"nama":"APT. NI PUTU MONICA ROSDIANA DEWI PARAMITHA, S.FARM.","divisi":"QUALITY ASSURANCE & COMPLIANCE","jabatan":"MANAGER","status":"TETAP"},{"no":9,"nama":"APT. I GUSTI KADEK SURYA AMERTHA, S. FARM.","divisi":"OPERASIONAL & GPP EXCELLENCE","jabatan":"MANAGER","status":"TETAP"},{"no":10,"nama":"RATIH DYANTARI","divisi":"HUMAN GROWTH & GA","jabatan":"OFFICER","status":"TETAP"},{"no":11,"nama":"I PUTU EKO ARYMANTO WIRA KESUMA","divisi":"INVENTORY, SUPPLY CHAIN & MERCHANDISE","jabatan":"OFFICER","status":"TETAP"},{"no":12,"nama":"I PUTU DARMA YUDHA","divisi":"INVENTORY, SUPPLY CHAIN & MERCHANDISE","jabatan":"OFFICER","status":"TETAP"},{"no":13,"nama":"ASRI WELAS PANGESTU","divisi":"REVENUE AND GROWH (B2B)","jabatan":"OFFICER","status":"TETAP"},{"no":14,"nama":"TEOFILUS JENABU","divisi":"NEW STORE, LEGAL & REGULASI","jabatan":"OFFICER","status":"TETAP"},{"no":15,"nama":"MADE DIO LOKANTARA","divisi":"OPERASIONAL & GPP EXCELLENCE","jabatan":"OFFICER","status":"TETAP"},{"no":16,"nama":"MADE KIKI ROSALINA","divisi":"FINANCE, ACCOUNTING AND TAX","jabatan":"OFFICER","status":"TETAP"},{"no":17,"nama":"APT. NI LUH PUTU EVAYANTI, S.FARM","divisi":"HUMAN GROWTH & GA","jabatan":"SUPERVISOR","status":"TETAP"},{"no":18,"nama":"APT. KADEK INTAN PRANANINGTYAS, S.FARM","divisi":"HUMAN GROWTH & GA","jabatan":"SUPERVISOR","status":"TETAP"},{"no":19,"nama":"I PUTU YOGI ANTARA","divisi":"FINANCE, ACCOUNTING AND TAX","jabatan":"SUPERVISOR","status":"TETAP"},{"no":20,"nama":"I MADE DONI PALGUNA, S.M (AUDIT)","divisi":"QUALITY ASSURANCE & COMPLIANCE","jabatan":"SUPERVISOR","status":"TETAP"},{"no":21,"nama":"NI MADE INDAH RISMAWATI","divisi":"FINANCE, ACCOUNTING AND TAX","jabatan":"SUPERVISOR","status":"TETAP"},{"no":22,"nama":"APT. NI PUTU ARDHIANI KENCANA PUTRI, S.FARM","divisi":"INVENTORY, SUPPLY CHAIN & MERCHANDISE","jabatan":"SUPERVISOR","status":"TETAP"},{"no":23,"nama":"GEDE SUGHANDI","divisi":"DIGITALISASI DAN TRANSFORMASI","jabatan":"SUPERVISOR","status":"TETAP"},{"no":24,"nama":"GUSTI AYU IDA SINTIA DEWI","divisi":"INVENTORY, SUPPLY CHAIN & MERCHANDISE","jabatan":"SUPERVISOR","status":"TETAP"},{"no":25,"nama":"I PUTU AGUS ADITYA SUWAR BUDIARTA","divisi":"DIGITALISASI DAN TRANSFORMASI","jabatan":"SUPERVISOR","status":"TETAP"},{"no":26,"nama":"I GDE ARYA RADITYA ATMAWIJAYA, S.PSI., M.PSI., PSIKOLOG","divisi":"HUMAN GROWTH & GA","jabatan":"SUPERVISOR","status":"TETAP"},{"no":27,"nama":"GUNG ADI CANDRA","divisi":"INVENTORY, SUPPLY CHAIN & MERCHANDISE","jabatan":"SUPERVISOR","status":"TETAP"},{"no":28,"nama":"I GUSTI AYU SRI INDRAYANI","divisi":"INVENTORY, SUPPLY CHAIN & MERCHANDISE","jabatan":"SUPERVISOR","status":"TETAP"},{"no":29,"nama":"I PUTU GITA ARTAWAN","divisi":"OPERASIONAL & GPP EXCELLENCE","jabatan":"SUPERVISOR","status":"TETAP"},{"no":30,"nama":"NI PUTU AYU NITA PRACINTI","divisi":"FINANCE, ACCOUNTING AND TAX","jabatan":"SUPERVISOR","status":"TETAP"},{"no":31,"nama":"I PUTU PRAYOGA MEITIANTARA","divisi":"REVENUE AND GROWH (B2C)","jabatan":"SUPERVISOR","status":"TETAP"},{"no":32,"nama":"KADEK RATIH SUPALA, A.MD","divisi":"INVENTORY, SUPPLY CHAIN & MERCHANDISE","jabatan":"SUPERVISOR","status":"TETAP"},{"no":33,"nama":"PANDE PUTU GEDE ADITYA","divisi":"REVENUE AND GROWH (B2C)","jabatan":"SUPERVISOR","status":"TETAP"},{"no":34,"nama":"NI KOMANG ITA WIRAYANTI","divisi":"FINANCE, ACCOUNTING AND TAX","jabatan":"SUPERVISOR","status":"TETAP"},{"no":35,"nama":"NI PUTU RISMA YANI, A.MD.FARM","divisi":"INVENTORY, SUPPLY CHAIN & MERCHANDISE","jabatan":"SUPERVISOR","status":"TETAP"},{"no":36,"nama":"APT. DEWA AYU MADE DWI DESSY ARI, S.FARM","divisi":"HUMAN GROWTH & GA","jabatan":"SUPERVISOR","status":"TETAP"},{"no":37,"nama":"I NYOMAN FERRY WIRANTIKA PUTRA","divisi":"OPERASIONAL & GPP EXCELLENCE","jabatan":"SUPERVISOR","status":"TETAP"},{"no":38,"nama":"KOMANG VIDYA DEVI AYU LAKSMI","divisi":"MARKETING, BRANDING & COSTUMER ENGAGEMENT","jabatan":"SUPERVISOR","status":"TETAP"},{"no":39,"nama":"PUTU SRI VINIA CAHYANTARI, SM","divisi":"FINANCE, ACCOUNTING AND TAX","jabatan":"SUPERVISOR","status":"TETAP"},{"no":40,"nama":"APT. NI MADE ATIKA SARASWATI, S.FARM","divisi":"HUMAN GROWTH & GA","jabatan":"SUPERVISOR","status":"TETAP"},{"no":41,"nama":"NI NYOMAN MARITA PURNAMA DEWI","divisi":"MARKETING, BRANDING & COSTUMER ENGAGEMENT","jabatan":"SUPERVISOR","status":"TETAP"},{"no":42,"nama":"NI KADEK LARAS PUSPADEWI","divisi":"FINANCE, ACCOUNTING AND TAX","jabatan":"SUPERVISOR","status":"TETAP"},{"no":43,"nama":"NI MADE MULIANI","divisi":"INVENTORY, SUPPLY CHAIN & MERCHANDISE","jabatan":"SUPERVISOR","status":"TETAP"},{"no":44,"nama":"NI PUTU MITHA KUSUMADWI S. KOM","divisi":"HUMAN GROWTH & GA","jabatan":"SUPERVISOR","status":"TETAP"},{"no":45,"nama":"IDA AYU MADE CITRA SWANDEWI","divisi":"MARKETING, BRANDING & COSTUMER ENGAGEMENT","jabatan":"SUPERVISOR","status":"TETAP"},{"no":46,"nama":"NI MADE ENI TRISNAYANTI, S.TR.AKT","divisi":"FINANCE, ACCOUNTING AND TAX","jabatan":"SUPERVISOR","status":"TETAP"},{"no":47,"nama":"VINCA ANELIA, AMD, FARM.","divisi":"INVENTORY, SUPPLY CHAIN & MERCHANDISE","jabatan":"SUPERVISOR","status":"TIDAK TETAP"},{"no":48,"nama":"JOHAN LIE, AMD, FARM.","divisi":"NEW STORE, LEGAL & REGULASI","jabatan":"SUPERVISOR","status":"TIDAK TETAP"},{"no":49,"nama":"APT. NI MADE MARISA KUMALA, S. FARM.","divisi":"QUALITY ASSURANCE & COMPLIANCE","jabatan":"SUPERVISOR","status":"TIDAK TETAP"},{"no":50,"nama":"APT. IDA BAGUS ADI SANTIKARA, S.FARM.","divisi":"REVENUE AND GROWH (B2B)","jabatan":"SUPERVISOR","status":"TIDAK TETAP"},{"no":51,"nama":"NI KADEK WINDARI","divisi":"INVENTORY, SUPPLY CHAIN & MERCHANDISE","jabatan":"SUPERVISOR","status":"TIDAK TETAP"},{"no":52,"nama":"MADE SANDRARINI,S.FARM.,APT","divisi":"QUALITY ASSURANCE & COMPLIANCE","jabatan":"SUPERVISOR","status":"TIDAK TETAP"},{"no":53,"nama":"I KOMANG EGAR SUARAMA DHARMAWANGSA","divisi":"DIGITALISASI DAN TRANSFORMASI","jabatan":"MAGANG","status":"TETAP"}];
+
+/* ================= KONSTANTA ================= */
+const DENDA = 20000;
+/* ================= FIREBASE (Firestore) ================= */
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyB8IczdKR83QWr_42OczeukS3agG47dIe0",
+  authDomain: "groming-apotekku.firebaseapp.com",
+  projectId: "groming-apotekku",
+  storageBucket: "groming-apotekku.firebasestorage.app",
+  messagingSenderId: "666397011177",
+  appId: "1:666397011177:web:903aeda2550c50600fd478"
+};
+let FB = null; /* instance Firestore saat aktif */
+const IS_FB = typeof firebase!=='undefined' && !!(FIREBASE_CONFIG && FIREBASE_CONFIG.apiKey);
+/* ================= AUDITOR / LOGIN ================= */
+const AUDITORS = [
+  {id:'ceo', nama:'apt. I Gede Purna Yogi Suara, S.Si', jabatan:'CEO ApotekKU'},
+  {id:'coo', nama:'apt. I Putu Cahya Swandhika Negara, S.Farm', jabatan:'COO ApotekKU'}
+];
+const KEY_AUD = 'apotekku_grooming_auditor';
+let pickedAuditor = null;
+function currentAuditor(){ return CACHE.auditor; }
+function setAuditor(id){
+  CACHE.auditor=id;
+  if(IS_CLOUD) cloudSave('grooming-auditor', id, false);  /* per-perangkat, tidak dibagikan */
+  else store.set(KEY_AUD, id);
+}
+function auditorName(id){ const a=AUDITORS.find(x=>x.id===id); return a? a.nama+' ('+a.jabatan+')' : (id||'-'); }
+function renderLogin(){/* kartu auditor sudah statis di HTML */}
+function pickAuditor(id){
+  pickedAuditor = id;
+  AUDITORS.forEach(a=>{
+    const el=document.getElementById('aud-'+a.id);
+    el.style.borderColor = a.id===id? 'var(--red)':'var(--line)';
+    el.style.background = a.id===id? 'var(--red-soft)':'#fff';
+    el.style.boxShadow = a.id===id? '0 3px 12px rgba(200,16,46,.18)':'none';
+  });
+  document.getElementById('btnLogin').disabled = false;
+}
+function doLogin(){
+  if(!pickedAuditor) return;
+  setAuditor(pickedAuditor);
+  applyAuth();
+  toast('Login berhasil — Auditor: '+AUDITORS.find(a=>a.id===pickedAuditor).jabatan,'ok');
+}
+function doLogout(){
+  setAuditor(null);
+  pickedAuditor = null;
+  document.getElementById('btnLogin').disabled = true;
+  renderLogin();
+  applyAuth();
+}
+function applyAuth(){
+  const id = currentAuditor();
+  const logged = !!id && AUDITORS.some(a=>a.id===id);
+  document.getElementById('loginOverlay').style.display = logged? 'none':'flex';
+  document.getElementById('hdrAuditor').style.display = logged? 'flex':'none';
+  if(logged){
+    const a = AUDITORS.find(x=>x.id===id);
+    document.getElementById('hdrAuditorName').textContent = '🔐 '+a.jabatan+' — '+a.nama.split(',')[0];
+  }
+}
+
+const rupiah = n => 'Rp ' + (n||0).toLocaleString('id-ID');
+const HARI = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+const SERAGAM = {
+  1:{nama:'Baju BUDAYA', extra:'Rambut wanita: dikepang + pita + baby hairpin'},
+  2:{nama:'Baju ENDEK', extra:'Rambut wanita: ikat setengah + pita + baby hairpin'},
+  3:{nama:'Baju PDL', extra:'Wajib nametag gantungan SMILE • Rambut wanita: dikepang + pita + baby hairpin'},
+  4:{nama:'Baju APOTEKKU', extra:'Rambut wanita: dikepang + pita + baby hairpin'},
+  5:{nama:'SMART CASUAL', extra:''},
+  6:{nama:'Baju APOTEKKU', extra:'Rambut wanita: dikepang + pita + baby hairpin'},
+  0:{nama:'SMART CASUAL', extra:''}
+};
+
+/* 8 titik grooming (poster) + 4 titik SOP */
+function groomingItems(gender, dow){
+  const P = gender==='P';
+  const items = [
+    {id:'rambut', t:'Rambut / Kepala', d: P?'Bersih & rapi. '+(SERAGAM[dow].extra.includes('Rambut')?SERAGAM[dow].extra.replace('Wajib nametag gantungan SMILE • ',''):'Dikepang + pita'):'Bersih & rapi, potongan rapi, telinga terlihat jelas', rule:'HARUS'},
+    {id:'telinga', t:'Telinga — Anting-anting', d: P?'Wajib memakai anting-anting':'Tidak boleh memakai anting-anting', rule: P?'HARUS':'TIDAK BOLEH'},
+    {id:'leher', t:'Leher / Dada — Kalung', d:'Tidak boleh memakai kalung', rule:'TIDAK BOLEH'},
+    {id:'wajah', t:'Wajah — Makeup', d: P?'Wajib makeup: foundation, bedak, blush on, alis, lipstik':'Tidak boleh memakai makeup', rule: P?'HARUS':'TIDAK BOLEH'},
+    {id:'jam', t:'Pergelangan Tangan — Jam Tangan', d:'Wajib memakai jam tangan', rule:'HARUS'},
+    {id:'cincin', t:'Jari Tangan — Cincin', d:'Boleh memakai cincin maksimal 2', rule:'BOLEH MAKS 2'},
+    {id:'gigi', t:'Gigi', d:'Bersih dan tidak bau nafas', rule:'HARUS'},
+    {id:'badan', t:'Badan — Parfum', d:'Parfum di-apply tiap 3 jam sekali', rule:'HARUS'},
+    {id:'seragam', t:'Seragam Hari Ini', d:HARI[dow]+' → '+SERAGAM[dow].nama, rule:'HARUS'},
+    {id:'celana', t:'Celana', d:'Bahan kain / bahan jeans', rule:'HARUS'},
+    {id:'sepatu', t:'Sepatu', d:'Menggunakan sepatu sport', rule:'HARUS'},
+  ];
+  if(dow===3) items.push({id:'nametag', t:'Nametag Rabu', d:'Wajib nametag gantungan smile', rule:'HARUS'});
+  return items;
+}
+
+/* ================= TEBAK GENDER DARI NAMA ================= */
+function guessGender(nama){
+  const n = ' '+nama.toUpperCase().replace(/APT\.|S\.FARM|A\.?MD|,|\./g,' ')+' ';
+  if(/\sNI\s|\sLUH\s|AYU|ISTRI|PUTRI\s|DEWI|RATIH|INTAN|SINTIA|LARAS|MULIANI|WINDARI|SANDRARINI|ELSA|ASRI|KIKI|VINCA|MARISA|RISMA|MITHA|CITRA|ENI|VIDYA|MARITA|NITA|INDAH|ITA\s|VINIA|ATIKA|DESSY/.test(n)) return 'P';
+  if(/\sI\s|IDA BAGUS|GEDE|GDE|GUNG\s|JOHAN|TEOFILUS|DIO\s|PANDE/.test(n)) return 'L';
+  return 'P';
+}
+
+/* ================= STORAGE: CLOUD (online) > localStorage > memori ================= */
+let IS_CLOUD = !IS_FB && typeof window!=='undefined' && !!window.storage;   // artifact online (dipakai bila Firebase tidak aktif)
+let MEM = {}, storageOK = true;
+if(!IS_CLOUD){
+  try{ localStorage.setItem('__t','1'); localStorage.removeItem('__t'); }
+  catch(e){ storageOK=false; document.getElementById('storageWarn').style.display='block'; }
+}
+const store = {
+  get(k){ try{ if(storageOK){const v=localStorage.getItem(k);return v?JSON.parse(v):null;} }catch(e){} return MEM[k]||null; },
+  set(k,v){ try{ if(storageOK){localStorage.setItem(k,JSON.stringify(v));return;} }catch(e){} MEM[k]=v; }
+};
+const KEY_REC = 'apotekku_grooming_records';
+const KEY_GEN = 'apotekku_grooming_gender';
+/* cache memori — sumber kebenaran saat runtime */
+let CACHE = { records:{}, gender:{}, auditor:null };
+let cloudBusy = 0;
+function cloudDot(on){
+  const el=document.getElementById('cloudDot'); if(!el) return;
+  const mode = FB? '🔥 Firebase' : (IS_CLOUD? '☁️ Cloud' : '💾 Lokal');
+  el.textContent = on? mode+' • menyimpan...' : (FB||IS_CLOUD? mode+' • tersinkron' : mode+' • perangkat ini');
+}
+async function cloudSave(key,val,shared){
+  cloudBusy++; cloudDot(true);
+  try{ await window.storage.set(key, JSON.stringify(val), shared); }
+  catch(e){ toast('Gagal menyimpan ke cloud — coba lagi','err'); }
+  cloudBusy--; if(cloudBusy<=0) cloudDot(false);
+}
+async function cloudLoad(key,shared){
+  try{ const r=await window.storage.get(key,shared); return r?JSON.parse(r.value):null; }
+  catch(e){ return null; }
+}
+function fbSaveDate(date){
+  const byEmp = CACHE.records[date];
+  cloudBusy++; cloudDot(true);
+  const ref = FB.collection('grooming').doc('rec-'+date);
+  const p = (byEmp && Object.keys(byEmp).length)? ref.set(byEmp) : ref.delete();
+  p.catch(e=>toast('Gagal menyimpan ke Firebase — periksa koneksi','err'))
+   .finally(()=>{ cloudBusy--; if(cloudBusy<=0) cloudDot(false); });
+}
+function refreshActive(){ /* dipanggil saat ada update real-time dari perangkat lain */
+  const p=document.querySelector('.page.show'); if(!p) return;
+  const id=p.id.replace('page-','');
+  if(id==='dashboard') renderDashboard();
+  if(id==='rekap') renderRekap();
+  if(id==='karyawan') renderEmpTable();
+  /* halaman checklist sengaja tidak di-render ulang agar penilaian yang sedang berlangsung tidak hilang */
+}
+function getRecords(){ return CACHE.records; }
+function setRecords(r, changedDate){
+  CACHE.records=r;
+  if(FB){ if(changedDate) fbSaveDate(changedDate); return; }
+  if(IS_CLOUD) cloudSave('grooming-records', r, true);
+  else store.set(KEY_REC, r);
+}
+function getGenderMap(){ return CACHE.gender; }
+function setGenderMap(g){
+  CACHE.gender=g;
+  if(FB){
+    cloudBusy++; cloudDot(true);
+    FB.collection('grooming').doc('meta-gender').set(g)
+      .catch(e=>toast('Gagal menyimpan ke Firebase','err'))
+      .finally(()=>{ cloudBusy--; if(cloudBusy<=0) cloudDot(false); });
+    return;
+  }
+  if(IS_CLOUD) cloudSave('grooming-gender', g, true);
+  else store.set(KEY_GEN, g);
+}
+function empGender(e){ const m=getGenderMap(); return m[e.no]||guessGender(e.nama); }
+
+/* ================= NAVIGASI ================= */
+function go(p){
+  document.querySelectorAll('.page').forEach(x=>x.classList.remove('show'));
+  document.getElementById('page-'+p).classList.add('show');
+  document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active',b.dataset.page===p));
+  if(p==='dashboard') renderDashboard();
+  if(p==='rekap') renderRekap();
+  if(p==='karyawan') renderEmpTable();
+}
+function toast(msg,cls){ const t=document.getElementById('toast'); t.textContent=msg; t.className='show '+(cls||''); setTimeout(()=>t.className='',2600); }
+
+
+/* ================= CHECKLIST ================= */
+let current = {}; // {itemId: true(sesuai)/false(melanggar)}
+
+function ddToggle(which){
+  const p=document.getElementById('panel'+which);
+  const other=which==='Divisi'?'Emp':'Divisi';
+  document.getElementById('panel'+other).classList.remove('open');
+  const opening=!p.classList.contains('open');
+  p.classList.toggle('open');
+  if(opening){
+    const q=document.getElementById('q'+which); q.value='';
+    if(which==='Divisi') ddRenderDivisi(); else ddRenderEmp();
+    setTimeout(()=>q.focus(),50);
+  }
+}
+function ddClose(){ document.getElementById('panelDivisi').classList.remove('open'); document.getElementById('panelEmp').classList.remove('open'); }
+function ddRenderDivisi(){
+  const q=(document.getElementById('qDivisi').value||'').toLowerCase();
+  const cur=document.getElementById('chkDivisi').value;
+  const divs=[...new Set(BASE_EMPLOYEES.map(e=>e.divisi))].sort().filter(d=>!q||d.toLowerCase().includes(q));
+  let html=(!q?`<div class="dd-item ${cur===''?'sel':''}" onclick="pickDivisi('')">— Semua Divisi —<small style="margin-left:auto">${BASE_EMPLOYEES.length} insan</small></div>`:'');
+  html+=divs.map(d=>{
+    const n=BASE_EMPLOYEES.filter(e=>e.divisi===d).length;
+    return `<div class="dd-item ${cur===d?'sel':''}" onclick="pickDivisi('${d.replace(/'/g,"\\'")}')"><span style="flex:1">${d}</span><small>${n} insan</small></div>`;
+  }).join('');
+  document.getElementById('listDivisi').innerHTML = html || '<div class="dd-empty">Divisi tidak ditemukan</div>';
+}
+function pickDivisi(d){
+  document.getElementById('chkDivisi').value=d;
+  document.getElementById('lblDivisi').textContent=d||'— Semua Divisi —';
+  ddClose();
+  fillEmpSelect();
+}
+function ddRenderEmp(){
+  const q=(document.getElementById('qEmp').value||'').toLowerCase();
+  const div=document.getElementById('chkDivisi').value;
+  const cur=+document.getElementById('chkEmp').value;
+  const list=BASE_EMPLOYEES.filter(e=>(!div||e.divisi===div)&&(!q||e.nama.toLowerCase().includes(q)||e.divisi.toLowerCase().includes(q)));
+  document.getElementById('listEmp').innerHTML = list.length? list.map(e=>`
+    <div class="dd-item ${cur===e.no?'sel':''}" onclick="pickEmp(${e.no})">
+      <div style="width:30px;height:30px;border-radius:8px;background:var(--red);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11px;flex-shrink:0">${e.no}</div>
+      <div style="min-width:0;flex:1"><span style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.nama}</span><small>${e.divisi} • ${e.jabatan}</small></div>
+    </div>`).join('') : '<div class="dd-empty">Nama tidak ditemukan'+(div?' di divisi ini — coba pilih "Semua Divisi"':'')+'</div>';
+}
+function pickEmp(no){
+  const e=BASE_EMPLOYEES.find(x=>x.no===no); if(!e) return;
+  document.getElementById('chkEmp').value=String(no);
+  document.getElementById('lblEmp').textContent=e.no+'. '+e.nama;
+  ddClose();
+  renderChecklist();
+}
+function fillDivisiSelect(){ ddRenderDivisi(); }
+function fillEmpSelect(){
+  const div=document.getElementById('chkDivisi').value;
+  const list=BASE_EMPLOYEES.filter(e=>!div||e.divisi===div);
+  const cur=+document.getElementById('chkEmp').value;
+  if(!list.some(e=>e.no===cur) && list.length){
+    document.getElementById('chkEmp').value=String(list[0].no);
+    document.getElementById('lblEmp').textContent=list[0].no+'. '+list[0].nama;
+  }
+  ddRenderEmp();
+  renderChecklist();
+}
+document.addEventListener('click',ev=>{ if(!ev.target.closest('.dd')) ddClose(); });
+function selectedEmp(){ const no=+document.getElementById('chkEmp').value; return BASE_EMPLOYEES.find(e=>e.no===no); }
+
+function renderChecklist(){
+  const dateStr = document.getElementById('chkDate').value;
+  const emp = selectedEmp();
+  if(!dateStr||!emp) return;
+  const dow = new Date(dateStr+'T12:00:00').getDay();
+  const g = empGender(emp);
+  const s = SERAGAM[dow];
+  document.getElementById('dayBanner').innerHTML =
+    `<div class="icon">👕</div><div><b>${HARI[dow]}</b> — Seragam: <b>${s.nama}</b>${s.extra?`<small>${s.extra}</small>`:''}</div>
+     <div style="margin-left:auto"><span class="pill ${g==='P'?'p':'l'}">${g==='P'?'Perempuan':'Laki-laki'}</span></div>`;
+  document.getElementById('chkTitle').textContent = 'Titik Grooming — '+emp.nama;
+
+  const saved = (getRecords()[dateStr]||{})[emp.no];
+  const items = groomingItems(g,dow);
+  current = {};
+  items.forEach(it=>{ current[it.id] = saved ? (saved.items[it.id]!==false) : true; });
+  document.getElementById('chkNote').value = saved?.note||'';
+  document.getElementById('chkStatusPill').className = 'pill '+(saved?'ok':'neutral');
+  document.getElementById('chkStatusPill').textContent = saved?('✔ Tersimpan '+new Date(saved.savedAt).toLocaleString('id-ID',{dateStyle:'short',timeStyle:'short'})+(saved.auditor?' • Auditor: '+(AUDITORS.find(a=>a.id===saved.auditor)?.jabatan||saved.auditor):'')):'Belum disimpan';
+  document.getElementById('btnDelete').style.display = saved?'inline-block':'none';
+
+  document.getElementById('chkItems').innerHTML = items.map((it,i)=>{
+    const v = current[it.id];
+    const rc = it.rule==='HARUS'?'rule-harus':(it.rule==='TIDAK BOLEH'?'rule-tidak':'rule-boleh');
+    return `<div class="chk-item ${v?'v-ok':'v-no'}" id="row-${it.id}">
+      <div class="chk-num">${i+1}</div>
+      <div class="chk-body"><b>${it.t}</b> <span class="chk-rule ${rc}">${it.rule}</span><small>${it.d}</small></div>
+      <div class="seg">
+        <button class="${v?'on-ok':''}" onclick="mark('${it.id}',true)">✓ Sesuai</button>
+        <button class="${v?'':'on-no'}" onclick="mark('${it.id}',false)">✗ Melanggar</button>
+      </div>
+    </div>`;
+  }).join('');
+  updateSummary();
+}
+function mark(id,val){
+  current[id]=val;
+  const row=document.getElementById('row-'+id);
+  row.className='chk-item '+(val?'v-ok':'v-no');
+  const btns=row.querySelectorAll('.seg button');
+  btns[0].className=val?'on-ok':''; btns[1].className=val?'':'on-no';
+  updateSummary();
+}
+function updateSummary(){
+  const vals=Object.values(current);
+  const no=vals.filter(v=>!v).length;
+  document.getElementById('sumOk').textContent=vals.length-no;
+  document.getElementById('sumNo').textContent=no;
+  document.getElementById('sumDenda').textContent=rupiah(no*DENDA);
+}
+function saveChecklist(){
+  if(!currentAuditor()) { applyAuth(); return toast('Silakan login sebagai auditor dulu','err'); }
+  const dateStr=document.getElementById('chkDate').value, emp=selectedEmp();
+  if(!dateStr||!emp) return toast('Pilih tanggal & karyawan dulu','err');
+  const rec=getRecords();
+  rec[dateStr]=rec[dateStr]||{};
+  rec[dateStr][emp.no]={items:{...current}, note:document.getElementById('chkNote').value.trim(), savedAt:Date.now(), auditor:currentAuditor()};
+  setRecords(rec, dateStr);
+  const no=Object.values(current).filter(v=>!v).length;
+  toast(`Tersimpan: ${emp.nama.split(',')[0]} — ${no} pelanggaran (${rupiah(no*DENDA)})`,'ok');
+  renderChecklist();
+}
+function resetChecklist(){ Object.keys(current).forEach(k=>current[k]=true); renderChecklist0(); }
+function renderChecklist0(){ // re-render keeping current
+  const dateStr=document.getElementById('chkDate').value;
+  const emp=selectedEmp(); if(!emp) return;
+  Object.keys(current).forEach(id=>{ const row=document.getElementById('row-'+id); if(row) mark(id,current[id]); });
+}
+function deleteChecklist(){
+  const dateStr=document.getElementById('chkDate').value, emp=selectedEmp();
+  if(!confirm('Hapus checklist '+emp.nama+' tanggal '+dateStr+'?')) return;
+  const rec=getRecords();
+  if(rec[dateStr]){ delete rec[dateStr][emp.no]; if(!Object.keys(rec[dateStr]).length) delete rec[dateStr]; }
+  setRecords(rec, dateStr); toast('Data dihapus','ok'); renderChecklist();
+}
+
+/* ================= AGREGASI ================= */
+function monthData(ym){ // ym = 'YYYY-MM'
+  const rec=getRecords(); const out=[];
+  Object.entries(rec).forEach(([date,byEmp])=>{
+    if(!date.startsWith(ym)) return;
+    Object.entries(byEmp).forEach(([no,r])=>{
+      const emp=BASE_EMPLOYEES.find(e=>e.no===+no); if(!emp) return;
+      const viol=Object.entries(r.items).filter(([,v])=>v===false).map(([k])=>k);
+      out.push({date, emp, viol, note:r.note, auditor:r.auditor||''});
+    });
+  });
+  return out;
+}
+const ITEM_LABELS = {rambut:'Rambut/Kepala',telinga:'Anting-anting',leher:'Kalung',wajah:'Makeup',jam:'Jam Tangan',cincin:'Cincin',gigi:'Gigi',badan:'Parfum',seragam:'Seragam',celana:'Celana',sepatu:'Sepatu',nametag:'Nametag Rabu'};
+
+/* ================= DASHBOARD ================= */
+function renderDashboard(){
+  const ym=document.getElementById('dashMonth').value; if(!ym) return;
+  const data=monthData(ym);
+  const totalChecks=data.length;
+  const totalViol=data.reduce((s,d)=>s+d.viol.length,0);
+  const totalItems=data.reduce((s,d)=>s+d.viol.length+Object.keys(ITEM_LABELS).length*0,0); // approx below
+  const checkedEmp=new Set(data.map(d=>d.emp.no)).size;
+  const clean=data.filter(d=>d.viol.length===0).length;
+  const comp= totalChecks? Math.round(clean/totalChecks*100):0;
+
+  document.getElementById('dashStats').innerHTML=`
+    <div class="stat"><div class="big">${totalChecks}</div><div class="lbl">Total Pemeriksaan</div></div>
+    <div class="stat"><div class="big">${checkedEmp}<span style="font-size:14px;color:var(--muted)">/${BASE_EMPLOYEES.length}</span></div><div class="lbl">Insan Diperiksa</div></div>
+    <div class="stat red"><div class="big">${totalViol}</div><div class="lbl">Total Pelanggaran</div></div>
+    <div class="stat red"><div class="big">${rupiah(totalViol*DENDA)}</div><div class="lbl">Total Denda</div></div>
+    <div class="stat green"><div class="big">${comp}%</div><div class="lbl">Pemeriksaan Tanpa Pelanggaran</div></div>`;
+
+  // by item
+  const byItem={};
+  data.forEach(d=>d.viol.forEach(v=>byItem[v]=(byItem[v]||0)+1));
+  const itemsSorted=Object.entries(byItem).sort((a,b)=>b[1]-a[1]);
+  const maxI=itemsSorted[0]?.[1]||1;
+  document.getElementById('dashByItem').innerHTML = itemsSorted.length? itemsSorted.map(([k,v])=>
+    `<div class="bar-row"><div class="bl">${ITEM_LABELS[k]||k}</div><div class="bar-track"><div class="bar-fill" style="width:${Math.max(8,v/maxI*100)}%">${v}</div></div></div>`).join('')
+    : '<div class="empty-note"><div class="big-ico">🎉</div>Belum ada pelanggaran periode ini</div>';
+
+  // by divisi
+  const byDiv={};
+  data.forEach(d=>byDiv[d.emp.divisi]=(byDiv[d.emp.divisi]||0)+d.viol.length);
+  const divSorted=Object.entries(byDiv).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
+  const maxD=divSorted[0]?.[1]||1;
+  document.getElementById('dashByDiv').innerHTML = divSorted.length? divSorted.map(([k,v])=>
+    `<div class="bar-row"><div class="bl">${k}</div><div class="bar-track"><div class="bar-fill" style="width:${Math.max(8,v/maxD*100)}%">${v}</div></div></div>`).join('')
+    : '<div class="empty-note"><div class="big-ico">🎉</div>Belum ada pelanggaran periode ini</div>';
+
+  // top 10
+  const byEmp={};
+  data.forEach(d=>{ byEmp[d.emp.no]=byEmp[d.emp.no]||{emp:d.emp,checks:0,viol:0}; byEmp[d.emp.no].checks++; byEmp[d.emp.no].viol+=d.viol.length; });
+  const top=Object.values(byEmp).filter(x=>x.viol>0).sort((a,b)=>b.viol-a.viol).slice(0,10);
+  document.getElementById('dashTopTbl').innerHTML = top.length?
+    '<thead><tr><th>#</th><th>Nama</th><th>Divisi</th><th>Diperiksa</th><th>Pelanggaran</th><th>Denda</th></tr></thead><tbody>'+
+    top.map((x,i)=>`<tr><td>${i+1}</td><td><b>${x.emp.nama}</b></td><td>${x.emp.divisi}</td><td>${x.checks}×</td><td><span class="pill no">${x.viol}</span></td><td class="denda-txt">${rupiah(x.viol*DENDA)}</td></tr>`).join('')+'</tbody>'
+    : '<tbody><tr><td><div class="empty-note"><div class="big-ico">🏅</div>Tidak ada pelanggaran — semua tampil terbaik!</div></td></tr></tbody>';
+}
+
+/* ================= REKAP BULANAN ================= */
+function rekapRows(ym){
+  const data=monthData(ym);
+  const byEmp={};
+  BASE_EMPLOYEES.forEach(e=>byEmp[e.no]={emp:e,checks:0,viol:0,perItem:{},notes:[]});
+  data.forEach(d=>{
+    const b=byEmp[d.emp.no]; b.checks++; b.viol+=d.viol.length;
+    d.viol.forEach(v=>b.perItem[v]=(b.perItem[v]||0)+1);
+    if(d.note) b.notes.push(d.date.slice(8)+': '+d.note);
+  });
+  return Object.values(byEmp);
+}
+function renderRekap(){
+  const ym=document.getElementById('rekapMonth').value; if(!ym) return;
+  const q=(document.getElementById('rekapSearch').value||'').toLowerCase();
+  const rows=rekapRows(ym);
+  const totV=rows.reduce((s,r)=>s+r.viol,0);
+  const totC=rows.reduce((s,r)=>s+r.checks,0);
+  const [y,m]=ym.split('-');
+  const bulan=new Date(y,m-1,1).toLocaleDateString('id-ID',{month:'long',year:'numeric'});
+  document.getElementById('rekapSum').innerHTML=`
+    <div class="sum-box"><div class="val">${bulan}</div><div class="lbl">Periode</div></div>
+    <div class="sum-box"><div class="val">${totC}</div><div class="lbl">Total Pemeriksaan</div></div>
+    <div class="sum-box denda"><div class="val">${totV}</div><div class="lbl">Total Pelanggaran</div></div>
+    <div class="sum-box denda"><div class="val">${rupiah(totV*DENDA)}</div><div class="lbl">Total Denda</div></div>`;
+  const filtered=rows.filter(r=>!q||r.emp.nama.toLowerCase().includes(q)||r.emp.divisi.toLowerCase().includes(q));
+  document.getElementById('rekapTbl').innerHTML=
+    '<thead><tr><th>No</th><th>Nama</th><th>Divisi</th><th>Jabatan</th><th>Diperiksa</th><th>Pelanggaran</th><th>Detail Pelanggaran</th><th>Denda</th><th>Status</th></tr></thead><tbody>'+
+    filtered.map(r=>{
+      const det=Object.entries(r.perItem).map(([k,v])=>`${ITEM_LABELS[k]||k} (${v}×)`).join(', ')||'—';
+      const st = r.checks===0?'<span class="pill neutral">Belum diperiksa</span>': r.viol===0?'<span class="pill ok">Bersih ✓</span>':'<span class="pill no">'+r.viol+' pelanggaran</span>';
+      return `<tr><td>${r.emp.no}</td><td><b>${r.emp.nama}</b></td><td>${r.emp.divisi}</td><td>${r.emp.jabatan}</td><td>${r.checks}×</td><td>${r.viol}</td><td style="max-width:260px;font-size:11.5px">${det}</td><td class="denda-txt">${r.viol?rupiah(r.viol*DENDA):'—'}</td><td>${st}</td></tr>`;
+    }).join('')+'</tbody>';
+}
+
+/* ================= EXPORT EXCEL ================= */
+function exportExcel(){
+  if(typeof XLSX==='undefined') return toast('Library Excel belum termuat — pastikan ada koneksi internet lalu coba lagi','err');
+  const ym=document.getElementById('rekapMonth').value;
+  if(!ym) return toast('Pilih periode dulu','err');
+  const [y,m]=ym.split('-');
+  const bulan=new Date(y,m-1,1).toLocaleDateString('id-ID',{month:'long',year:'numeric'});
+  const rows=rekapRows(ym);
+
+  // Sheet 1: Rekap
+  const aoa=[['REKAP BULANAN GROOMING SSC APOTEKKU'],['Periode: '+bulan],['Denda per pelanggaran: Rp 20.000'],['Auditor: '+ (AUDITORS.find(a=>a.id===currentAuditor())?.nama || '-')],[],
+    ['No','Nama Insan SSC','Divisi','Jabatan','Status','Jml Diperiksa','Jml Pelanggaran','Detail Pelanggaran','Total Denda (Rp)','Catatan']];
+  rows.forEach(r=>{
+    aoa.push([r.emp.no,r.emp.nama,r.emp.divisi,r.emp.jabatan,r.emp.status,r.checks,r.viol,
+      Object.entries(r.perItem).map(([k,v])=>`${ITEM_LABELS[k]||k} (${v}x)`).join(', '), r.viol*DENDA, r.notes.join(' | ')]);
+  });
+  const totV=rows.reduce((s,r)=>s+r.viol,0);
+  aoa.push([],['','TOTAL','','','',rows.reduce((s,r)=>s+r.checks,0),totV,'',totV*DENDA]);
+
+  // Sheet 2: Detail harian
+  const det=[['Tanggal','No','Nama','Divisi','Titik Pelanggaran','Jml Pelanggaran','Denda (Rp)','Auditor','Catatan']];
+  monthData(ym).sort((a,b)=>a.date.localeCompare(b.date)||a.emp.no-b.emp.no).forEach(d=>{
+    det.push([d.date,d.emp.no,d.emp.nama,d.emp.divisi,d.viol.map(v=>ITEM_LABELS[v]||v).join(', ')||'-',d.viol.length,d.viol.length*DENDA,auditorName(d.auditor),d.note||'']);
+  });
+
+  const wb=XLSX.utils.book_new();
+  const ws1=XLSX.utils.aoa_to_sheet(aoa);
+  ws1['!cols']=[{wch:5},{wch:42},{wch:34},{wch:12},{wch:12},{wch:13},{wch:15},{wch:45},{wch:16},{wch:40}];
+  const ws2=XLSX.utils.aoa_to_sheet(det);
+  ws2['!cols']=[{wch:12},{wch:5},{wch:42},{wch:34},{wch:45},{wch:14},{wch:12},{wch:45},{wch:35}];
+  XLSX.utils.book_append_sheet(wb,ws1,'Rekap '+bulan.replace(' ','_').slice(0,25));
+  XLSX.utils.book_append_sheet(wb,ws2,'Detail Harian');
+  XLSX.writeFile(wb,`Rekap_Grooming_SSC_Apotekku_${ym}.xlsx`);
+  toast('Excel berhasil di-export 📥','ok');
+}
+
+/* ================= DATA KARYAWAN ================= */
+function renderEmpTable(){
+  const q=(document.getElementById('empSearch').value||'').toLowerCase();
+  const gm=getGenderMap();
+  const list=BASE_EMPLOYEES.filter(e=>!q||e.nama.toLowerCase().includes(q)||e.divisi.toLowerCase().includes(q)||e.jabatan.toLowerCase().includes(q));
+  document.getElementById('empTbl').innerHTML=
+    '<thead><tr><th>No</th><th>Nama</th><th>Divisi</th><th>Jabatan</th><th>Status</th><th>Jenis Kelamin</th></tr></thead><tbody>'+
+    list.map(e=>{
+      const g=empGender(e);
+      return `<tr><td>${e.no}</td><td><b>${e.nama}</b></td><td>${e.divisi}</td><td>${e.jabatan}</td><td>${e.status}</td>
+      <td><span class="pill ${g==='P'?'p':'l'}" style="cursor:pointer" title="Klik untuk ubah" onclick="toggleGender(${e.no})">${g==='P'?'P • Perempuan':'L • Laki-laki'} ⇄</span></td></tr>`;
+    }).join('')+'</tbody>';
+}
+function toggleGender(no){
+  const gm=getGenderMap();
+  const e=BASE_EMPLOYEES.find(x=>x.no===no);
+  gm[no]=empGender(e)==='P'?'L':'P';
+  setGenderMap({...gm});
+  renderEmpTable(); renderChecklist();
+  toast('Jenis kelamin diperbarui','ok');
+}
+
+/* ================= INIT ================= */
+(async function init(){
+  var jc=document.getElementById('jsCheck'); if(jc) jc.remove();
+  if(IS_FB){
+    try{
+      firebase.initializeApp(FIREBASE_CONFIG);
+      FB = firebase.firestore();
+      try{ await FB.enablePersistence({synchronizeTabs:true}); }catch(e){/* multi-tab / browser lama: lanjut tanpa cache offline */}
+      await firebase.auth().signInAnonymously();
+      document.getElementById('storageWarn').style.display='none';
+      CACHE.auditor = store.get(KEY_AUD)||null; /* login auditor tetap per perangkat */
+      await new Promise((res,rej)=>{
+        let first=true;
+        FB.collection('grooming').onSnapshot(snap=>{
+          const rec={}; let gen={};
+          snap.forEach(d=>{
+            if(d.id==='meta-gender') gen=d.data()||{};
+            else if(d.id.indexOf('rec-')===0) rec[d.id.slice(4)]=d.data()||{};
+          });
+          CACHE.records=rec; CACHE.gender=gen;
+          cloudDot(false);
+          if(first){ first=false; res(); } else refreshActive();
+        }, err=>{ if(first){ first=false; rej(err); } });
+      });
+    }catch(e){
+      console.warn('Firebase gagal, memakai penyimpanan cadangan:', e);
+      FB = null;
+      IS_CLOUD = typeof window!=='undefined' && !!window.storage;
+      if(IS_CLOUD){
+        const [rec,gen,aud] = await Promise.all([
+          cloudLoad('grooming-records', true),
+          cloudLoad('grooming-gender', true),
+          cloudLoad('grooming-auditor', false)
+        ]);
+        CACHE.records = rec||{}; CACHE.gender = gen||{}; CACHE.auditor = aud||null;
+      } else {
+        CACHE.records = store.get(KEY_REC)||{};
+        CACHE.gender  = store.get(KEY_GEN)||{};
+        CACHE.auditor = store.get(KEY_AUD)||null;
+      }
+      toast('Firebase tidak terjangkau — memakai penyimpanan cadangan','err');
+    }
+  } else if(IS_CLOUD){
+    document.getElementById('storageWarn').style.display='none';
+    const [rec,gen,aud] = await Promise.all([
+      cloudLoad('grooming-records', true),
+      cloudLoad('grooming-gender', true),
+      cloudLoad('grooming-auditor', false)
+    ]);
+    CACHE.records = rec||{}; CACHE.gender = gen||{}; CACHE.auditor = aud||null;
+    cloudDot(false);
+  } else {
+    CACHE.records = store.get(KEY_REC)||{};
+    CACHE.gender  = store.get(KEY_GEN)||{};
+    CACHE.auditor = store.get(KEY_AUD)||null;
+    cloudDot(false);
+  }
+  const today=new Date();
+  const iso=today.toISOString().slice(0,10);
+  const ym=iso.slice(0,7);
+  document.getElementById('chkDate').value=iso;
+  document.getElementById('dashMonth').value=ym;
+  document.getElementById('rekapMonth').value=ym;
+  document.getElementById('hdrDate').textContent=today.toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  fillDivisiSelect(); fillEmpSelect();
+  renderLogin(); applyAuth();
+})();
+</script>
+</body>
+</html>
