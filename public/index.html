@@ -305,8 +305,11 @@ noscript .nojs-warn{display:block!important}
 <div class="page" id="page-karyawan">
   <div class="card">
     <h2>Data Karyawan SSC</h2>
-    <div class="hint">Sumber data: Firestore. Jenis kelamin dapat dikoreksi dengan klik pill P/L (memengaruhi aturan anting & makeup pada checklist).</div>
-    <input type="text" id="empSearch" placeholder="🔍 Cari nama / divisi / jabatan..." style="max-width:300px;margin-bottom:12px" oninput="renderEmpTable()">
+    <div class="hint">Sumber data: Firestore. Tambah, edit, dan nonaktifkan karyawan langsung tersimpan ke database.</div>
+    <div class="flex-between" style="margin-bottom:12px">
+      <input type="text" id="empSearch" placeholder="🔍 Cari nama / divisi / jabatan..." style="max-width:300px" oninput="renderEmpTable()">
+      <button class="btn small" onclick="addEmployee()">+ Tambah Karyawan</button>
+    </div>
     <div class="tbl-wrap"><table id="empTbl"></table></div>
   </div>
 </div>
@@ -327,8 +330,28 @@ function normalizeEmployees(list){
       aktif:e.aktif!==false,
       gender:e.gender==='L'||e.gender==='P'?e.gender:''
     }))
-    .filter(e=>Number.isFinite(e.no)&&e.nama&&e.aktif)
+    .filter(e=>Number.isFinite(e.no)&&e.nama)
     .sort((a,b)=>a.no-b.no);
+}
+const activeEmployees = () => EMPLOYEES.filter(e=>e.aktif!==false);
+function nextEmployeeNo(){
+  return EMPLOYEES.reduce((m,e)=>Math.max(m,e.no||0),0)+1;
+}
+async function loadEmployees(){
+  if(!FB) throw new Error('Firestore belum aktif');
+  const d = await FB.collection('grooming').doc('meta-employees').get();
+  EMPLOYEES = normalizeEmployees((d.data()||{}).list);
+  return EMPLOYEES;
+}
+async function loadAuditors(){
+  if(!FB) throw new Error('Firestore belum aktif');
+  const d = await FB.collection('grooming').doc('meta-auditors').get();
+  AUDITORS = normalizeAuditors((d.data()||{}).list);
+  return AUDITORS;
+}
+async function loadMasterData(){
+  if(!FB) return;
+  await Promise.all([loadEmployees(), loadAuditors()]);
 }
 
 /* ================= KONSTANTA ================= */
@@ -357,7 +380,6 @@ function normalizeAuditors(list){
     .filter(a=>a.id&&a.nama&&a.jabatan&&a.aktif);
 }
 const KEY_AUD = 'apotekku_grooming_auditor';
-const KEY_AUDITORS = 'apotekku_grooming_auditors';
 const KEY_PASS = 'apotekku_grooming_pass';
 const DEFAULT_PASS = 'apotekku';
 async function getPassMap(){
@@ -510,8 +532,7 @@ const store = {
 };
 const KEY_REC = 'apotekku_grooming_records';
 const KEY_GEN = 'apotekku_grooming_gender';
-const KEY_EMP = 'apotekku_grooming_employees';
-/* cache memori — sumber kebenaran saat runtime */
+/* state runtime untuk data checklist dan login perangkat */
 let CACHE = { records:{}, gender:{}, auditor:null };
 let cloudBusy = 0;
 function cloudDot(on){
@@ -566,17 +587,15 @@ function setGenderMap(g){
   if(IS_CLOUD) cloudSave('grooming-gender', g, true);
   else store.set(KEY_GEN, g);
 }
-function saveEmployees(){
+async function saveEmployees(){
   const list = EMPLOYEES.map(e=>({...e}));
-  store.set(KEY_EMP, list);
-  if(FB){
-    cloudBusy++; cloudDot(true);
-    FB.collection('grooming').doc('meta-employees').set({list, updatedAt:firebase.firestore.FieldValue.serverTimestamp()})
-      .catch(e=>toast('Gagal menyimpan data karyawan ke Firebase','err'))
-      .finally(()=>{ cloudBusy--; if(cloudBusy<=0) cloudDot(false); });
-    return;
+  if(!FB) throw new Error('Firestore belum aktif');
+  cloudBusy++; cloudDot(true);
+  try{
+    await FB.collection('grooming').doc('meta-employees').set({list, updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+  }finally{
+    cloudBusy--; if(cloudBusy<=0) cloudDot(false);
   }
-  if(IS_CLOUD) cloudSave('grooming-employees', list, true);
 }
 function empGender(e){
   const m=getGenderMap();
@@ -584,10 +603,14 @@ function empGender(e){
 }
 
 /* ================= NAVIGASI ================= */
-function go(p){
+async function go(p){
   document.querySelectorAll('.page').forEach(x=>x.classList.remove('show'));
   document.getElementById('page-'+p).classList.add('show');
   document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active',b.dataset.page===p));
+  try{
+    if(FB && ['checklist','dashboard','rekap','karyawan'].includes(p)) await loadEmployees();
+  }catch(e){ toast('Gagal mengambil data karyawan dari Firestore','err'); }
+  if(p==='checklist'){ fillDivisiSelect(); fillEmpSelect(); }
   if(p==='dashboard') renderDashboard();
   if(p==='rekap') renderRekap();
   if(p==='karyawan') renderEmpTable();
@@ -598,13 +621,15 @@ function toast(msg,cls){ const t=document.getElementById('toast'); t.textContent
 /* ================= CHECKLIST ================= */
 let current = {}; // {itemId: true(sesuai)/false(melanggar)}
 
-function ddToggle(which){
+async function ddToggle(which){
   const p=document.getElementById('panel'+which);
   const other=which==='Divisi'?'Emp':'Divisi';
   document.getElementById('panel'+other).classList.remove('open');
   const opening=!p.classList.contains('open');
   p.classList.toggle('open');
   if(opening){
+    try{ if(FB) await loadEmployees(); }
+    catch(e){ toast('Gagal mengambil data karyawan dari Firestore','err'); }
     const q=document.getElementById('q'+which); q.value='';
     if(which==='Divisi') ddRenderDivisi(); else ddRenderEmp();
     setTimeout(()=>q.focus(),50);
@@ -618,10 +643,11 @@ function ddRenderDivisi(){
     document.getElementById('listDivisi').innerHTML = '<div class="dd-empty">Data karyawan belum termuat dari Firestore</div>';
     return;
   }
-  const divs=[...new Set(EMPLOYEES.map(e=>e.divisi))].sort().filter(d=>!q||d.toLowerCase().includes(q));
-  let html=(!q?`<div class="dd-item ${cur===''?'sel':''}" onclick="pickDivisi('')">— Semua Divisi —<small style="margin-left:auto">${EMPLOYEES.length} insan</small></div>`:'');
+  const employees=activeEmployees();
+  const divs=[...new Set(employees.map(e=>e.divisi))].sort().filter(d=>!q||d.toLowerCase().includes(q));
+  let html=(!q?`<div class="dd-item ${cur===''?'sel':''}" onclick="pickDivisi('')">— Semua Divisi —<small style="margin-left:auto">${employees.length} insan</small></div>`:'');
   html+=divs.map(d=>{
-    const n=EMPLOYEES.filter(e=>e.divisi===d).length;
+    const n=employees.filter(e=>e.divisi===d).length;
     return `<div class="dd-item ${cur===d?'sel':''}" onclick="pickDivisi('${d.replace(/'/g,"\\'")}')"><span style="flex:1">${d}</span><small>${n} insan</small></div>`;
   }).join('');
   document.getElementById('listDivisi').innerHTML = html || '<div class="dd-empty">Divisi tidak ditemukan</div>';
@@ -640,7 +666,7 @@ function ddRenderEmp(){
     document.getElementById('listEmp').innerHTML = '<div class="dd-empty">Data karyawan belum termuat dari Firestore</div>';
     return;
   }
-  const list=EMPLOYEES.filter(e=>(!div||e.divisi===div)&&(!q||e.nama.toLowerCase().includes(q)||e.divisi.toLowerCase().includes(q)));
+  const list=activeEmployees().filter(e=>(!div||e.divisi===div)&&(!q||e.nama.toLowerCase().includes(q)||e.divisi.toLowerCase().includes(q)));
   document.getElementById('listEmp').innerHTML = list.length? list.map(e=>`
     <div class="dd-item ${cur===e.no?'sel':''}" onclick="pickEmp(${e.no})">
       <div style="width:30px;height:30px;border-radius:8px;background:var(--red);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11px;flex-shrink:0">${e.no}</div>
@@ -648,7 +674,7 @@ function ddRenderEmp(){
     </div>`).join('') : '<div class="dd-empty">Nama tidak ditemukan'+(div?' di divisi ini — coba pilih "Semua Divisi"':'')+'</div>';
 }
 function pickEmp(no){
-  const e=EMPLOYEES.find(x=>x.no===no); if(!e) return;
+  const e=activeEmployees().find(x=>x.no===no); if(!e) return;
   document.getElementById('chkEmp').value=String(no);
   document.getElementById('lblEmp').textContent=e.no+'. '+e.nama;
   ddClose();
@@ -657,7 +683,7 @@ function pickEmp(no){
 function fillDivisiSelect(){ ddRenderDivisi(); }
 function fillEmpSelect(){
   const div=document.getElementById('chkDivisi').value;
-  const list=EMPLOYEES.filter(e=>!div||e.divisi===div);
+  const list=activeEmployees().filter(e=>!div||e.divisi===div);
   const cur=+document.getElementById('chkEmp').value;
   if(!list.length){
     document.getElementById('chkEmp').value='';
@@ -674,7 +700,7 @@ function fillEmpSelect(){
   renderChecklist();
 }
 document.addEventListener('click',ev=>{ if(!ev.target.closest('.dd')) ddClose(); });
-function selectedEmp(){ const no=+document.getElementById('chkEmp').value; return EMPLOYEES.find(e=>e.no===no); }
+function selectedEmp(){ const no=+document.getElementById('chkEmp').value; return activeEmployees().find(e=>e.no===no); }
 
 function renderChecklist(){
   const dateStr = document.getElementById('chkDate').value;
@@ -787,7 +813,7 @@ function renderDashboard(){
 
   document.getElementById('dashStats').innerHTML=`
     <div class="stat"><div class="big">${totalChecks}</div><div class="lbl">Total Pemeriksaan</div></div>
-    <div class="stat"><div class="big">${checkedEmp}<span style="font-size:14px;color:var(--muted)">/${EMPLOYEES.length}</span></div><div class="lbl">Insan Diperiksa</div></div>
+    <div class="stat"><div class="big">${checkedEmp}<span style="font-size:14px;color:var(--muted)">/${activeEmployees().length}</span></div><div class="lbl">Insan Diperiksa</div></div>
     <div class="stat red"><div class="big">${totalViol}</div><div class="lbl">Total Pelanggaran</div></div>
     <div class="stat red"><div class="big">${rupiah(totalViol*DENDA)}</div><div class="lbl">Total Denda</div></div>
     <div class="stat green"><div class="big">${comp}%</div><div class="lbl">Pemeriksaan Tanpa Pelanggaran</div></div>`;
@@ -824,8 +850,9 @@ function renderDashboard(){
 function rekapRows(ym){
   const data=monthData(ym);
   const byEmp={};
-  EMPLOYEES.forEach(e=>byEmp[e.no]={emp:e,checks:0,viol:0,perItem:{},notes:[]});
+  activeEmployees().forEach(e=>byEmp[e.no]={emp:e,checks:0,viol:0,perItem:{},notes:[]});
   data.forEach(d=>{
+    byEmp[d.emp.no]=byEmp[d.emp.no]||{emp:d.emp,checks:0,viol:0,perItem:{},notes:[]};
     const b=byEmp[d.emp.no]; b.checks++; b.viol+=d.viol.length;
     d.viol.forEach(v=>b.perItem[v]=(b.perItem[v]||0)+1);
     if(d.note) b.notes.push(d.date.slice(8)+': '+d.note);
@@ -901,23 +928,93 @@ function renderEmpTable(){
     return;
   }
   document.getElementById('empTbl').innerHTML=
-    '<thead><tr><th>No</th><th>Nama</th><th>Divisi</th><th>Jabatan</th><th>Status</th><th>Jenis Kelamin</th></tr></thead><tbody>'+
+    '<thead><tr><th>No</th><th>Nama</th><th>Divisi</th><th>Jabatan</th><th>Status</th><th>Aktif</th><th>Jenis Kelamin</th><th>Aksi</th></tr></thead><tbody>'+
     list.map(e=>{
       const g=empGender(e);
-      return `<tr><td>${e.no}</td><td><b>${e.nama}</b></td><td>${e.divisi}</td><td>${e.jabatan}</td><td>${e.status}</td>
-      <td><span class="pill ${g==='P'?'p':'l'}" style="cursor:pointer" title="Klik untuk ubah" onclick="toggleGender(${e.no})">${g==='P'?'P • Perempuan':'L • Laki-laki'} ⇄</span></td></tr>`;
+      const active=e.aktif!==false;
+      return `<tr><td>${e.no}</td><td><b>${esc(e.nama)}</b></td><td>${esc(e.divisi)}</td><td>${esc(e.jabatan)}</td><td>${esc(e.status)}</td>
+      <td><span class="pill ${active?'ok':'neutral'}">${active?'Aktif':'Nonaktif'}</span></td>
+      <td><span class="pill ${g==='P'?'p':'l'}" style="cursor:pointer" title="Klik untuk ubah" onclick="toggleGender(${e.no})">${g==='P'?'P • Perempuan':'L • Laki-laki'} ⇄</span></td>
+      <td style="white-space:nowrap"><button class="btn small ghost" onclick="editEmployee(${e.no})">Edit</button> <button class="btn small ghost" onclick="${active?'deleteEmployee':'restoreEmployee'}(${e.no})">${active?'Nonaktifkan':'Aktifkan'}</button></td></tr>`;
     }).join('')+'</tbody>';
 }
-function toggleGender(no){
-  const gm=getGenderMap();
-  const e=EMPLOYEES.find(x=>x.no===no);
-  if(!e) return;
-  gm[no]=empGender(e)==='P'?'L':'P';
-  e.gender=gm[no];
-  setGenderMap({...gm});
-  saveEmployees();
-  renderEmpTable(); renderChecklist();
-  toast('Jenis kelamin diperbarui','ok');
+function readEmployeeForm(base){
+  const nama=prompt('Nama karyawan:', base?.nama||''); if(nama===null) return null;
+  const divisi=prompt('Divisi:', base?.divisi||''); if(divisi===null) return null;
+  const jabatan=prompt('Jabatan:', base?.jabatan||''); if(jabatan===null) return null;
+  const status=prompt('Status:', base?.status||'TETAP'); if(status===null) return null;
+  const gender=(prompt('Jenis kelamin (P/L):', base?.gender||guessGender(nama))||'').trim().toUpperCase();
+  if(!nama.trim()||!divisi.trim()||!jabatan.trim()||!status.trim()){ toast('Nama, divisi, jabatan, dan status wajib diisi','err'); return null; }
+  if(gender!=='P'&&gender!=='L'){ toast('Jenis kelamin harus P atau L','err'); return null; }
+  return {nama:nama.trim().toUpperCase(), divisi:divisi.trim().toUpperCase(), jabatan:jabatan.trim().toUpperCase(), status:status.trim().toUpperCase(), gender};
+}
+async function addEmployee(){
+  try{
+    await loadEmployees();
+    const data=readEmployeeForm({gender:'P',status:'TETAP'});
+    if(!data) return;
+    EMPLOYEES.push({no:nextEmployeeNo(), aktif:true, ...data});
+    EMPLOYEES=normalizeEmployees(EMPLOYEES);
+    await saveEmployees();
+    await loadEmployees();
+    fillDivisiSelect(); fillEmpSelect(); renderEmpTable();
+    toast('Karyawan baru tersimpan','ok');
+  }catch(e){ toast('Gagal menyimpan karyawan','err'); }
+}
+async function editEmployee(no){
+  try{
+    await loadEmployees();
+    const idx=EMPLOYEES.findIndex(x=>x.no===no);
+    if(idx<0) return toast('Karyawan tidak ditemukan','err');
+    const data=readEmployeeForm(EMPLOYEES[idx]);
+    if(!data) return;
+    EMPLOYEES[idx]={...EMPLOYEES[idx], ...data};
+    EMPLOYEES=normalizeEmployees(EMPLOYEES);
+    await saveEmployees();
+    await loadEmployees();
+    fillDivisiSelect(); fillEmpSelect(); renderEmpTable(); renderChecklist();
+    toast('Data karyawan diperbarui','ok');
+  }catch(e){ toast('Gagal memperbarui karyawan','err'); }
+}
+async function deleteEmployee(no){
+  if(!confirm('Nonaktifkan karyawan ini? Data checklist lama tetap aman.')) return;
+  try{
+    await loadEmployees();
+    const e=EMPLOYEES.find(x=>x.no===no);
+    if(!e) return toast('Karyawan tidak ditemukan','err');
+    e.aktif=false;
+    await saveEmployees();
+    await loadEmployees();
+    fillDivisiSelect(); fillEmpSelect(); renderEmpTable(); renderChecklist();
+    toast('Karyawan dinonaktifkan','ok');
+  }catch(e){ toast('Gagal menonaktifkan karyawan','err'); }
+}
+async function restoreEmployee(no){
+  try{
+    await loadEmployees();
+    const e=EMPLOYEES.find(x=>x.no===no);
+    if(!e) return toast('Karyawan tidak ditemukan','err');
+    e.aktif=true;
+    await saveEmployees();
+    await loadEmployees();
+    fillDivisiSelect(); fillEmpSelect(); renderEmpTable(); renderChecklist();
+    toast('Karyawan diaktifkan kembali','ok');
+  }catch(e){ toast('Gagal mengaktifkan karyawan','err'); }
+}
+async function toggleGender(no){
+  try{
+    await loadEmployees();
+    const gm=getGenderMap();
+    const e=EMPLOYEES.find(x=>x.no===no);
+    if(!e) return;
+    gm[no]=empGender(e)==='P'?'L':'P';
+    e.gender=gm[no];
+    setGenderMap({...gm});
+    await saveEmployees();
+    await loadEmployees();
+    renderEmpTable(); renderChecklist();
+    toast('Jenis kelamin diperbarui','ok');
+  }catch(e){ toast('Gagal memperbarui jenis kelamin','err'); }
 }
 
 /* ================= INIT ================= */
@@ -927,25 +1024,19 @@ function toggleGender(no){
     try{
       firebase.initializeApp(FIREBASE_CONFIG);
       FB = firebase.firestore();
-      try{ await FB.enablePersistence({synchronizeTabs:true}); }catch(e){/* multi-tab / browser lama: lanjut tanpa cache offline */}
       await firebase.auth().signInAnonymously();
       document.getElementById('storageWarn').style.display='none';
       CACHE.auditor = store.get(KEY_AUD)||null; /* login auditor tetap per perangkat */
+      await loadMasterData();
       await new Promise((res,rej)=>{
         let first=true;
         FB.collection('grooming').onSnapshot(snap=>{
-          const rec={}; let gen={}; let employees=[]; let auditors=[];
+          const rec={}; let gen={};
           snap.forEach(d=>{
             if(d.id==='meta-gender') gen=d.data()||{};
-            else if(d.id==='meta-employees') employees=normalizeEmployees((d.data()||{}).list);
-            else if(d.id==='meta-auditors') auditors=normalizeAuditors((d.data()||{}).list);
             else if(d.id.indexOf('rec-')===0) rec[d.id.slice(4)]=d.data()||{};
           });
           CACHE.records=rec; CACHE.gender=gen;
-          EMPLOYEES=employees;
-          AUDITORS=auditors;
-          store.set(KEY_EMP, EMPLOYEES);
-          store.set(KEY_AUDITORS, AUDITORS);
           cloudDot(false);
           if(first){ first=false; res(); } else refreshActive();
         }, err=>{ if(first){ first=false; rej(err); } });
@@ -955,44 +1046,32 @@ function toggleGender(no){
       FB = null;
       IS_CLOUD = typeof window!=='undefined' && !!window.storage;
       if(IS_CLOUD){
-        const [rec,gen,aud,emp,auditors] = await Promise.all([
+        const [rec,gen,aud] = await Promise.all([
           cloudLoad('grooming-records', true),
           cloudLoad('grooming-gender', true),
-          cloudLoad('grooming-auditor', false),
-          cloudLoad('grooming-employees', true),
-          cloudLoad('grooming-auditors', true)
+          cloudLoad('grooming-auditor', false)
         ]);
         CACHE.records = rec||{}; CACHE.gender = gen||{}; CACHE.auditor = aud||null;
-        EMPLOYEES = normalizeEmployees(emp||store.get(KEY_EMP)||[]);
-        AUDITORS = normalizeAuditors(auditors||store.get(KEY_AUDITORS)||[]);
       } else {
         CACHE.records = store.get(KEY_REC)||{};
         CACHE.gender  = store.get(KEY_GEN)||{};
         CACHE.auditor = store.get(KEY_AUD)||null;
-        EMPLOYEES = normalizeEmployees(store.get(KEY_EMP)||[]);
-        AUDITORS = normalizeAuditors(store.get(KEY_AUDITORS)||[]);
       }
       toast('Firebase tidak terjangkau — memakai penyimpanan cadangan','err');
     }
   } else if(IS_CLOUD){
     document.getElementById('storageWarn').style.display='none';
-    const [rec,gen,aud,emp,auditors] = await Promise.all([
+    const [rec,gen,aud] = await Promise.all([
       cloudLoad('grooming-records', true),
       cloudLoad('grooming-gender', true),
-      cloudLoad('grooming-auditor', false),
-      cloudLoad('grooming-employees', true),
-      cloudLoad('grooming-auditors', true)
+      cloudLoad('grooming-auditor', false)
     ]);
     CACHE.records = rec||{}; CACHE.gender = gen||{}; CACHE.auditor = aud||null;
-    EMPLOYEES = normalizeEmployees(emp||store.get(KEY_EMP)||[]);
-    AUDITORS = normalizeAuditors(auditors||store.get(KEY_AUDITORS)||[]);
     cloudDot(false);
   } else {
     CACHE.records = store.get(KEY_REC)||{};
     CACHE.gender  = store.get(KEY_GEN)||{};
     CACHE.auditor = store.get(KEY_AUD)||null;
-    EMPLOYEES = normalizeEmployees(store.get(KEY_EMP)||[]);
-    AUDITORS = normalizeAuditors(store.get(KEY_AUDITORS)||[]);
     cloudDot(false);
   }
   const today=new Date();
