@@ -321,7 +321,7 @@ noscript .nojs-warn{display:block!important}
 <div class="page" id="page-karyawan">
   <div class="card">
     <h2>Data Karyawan SSC</h2>
-    <div class="hint">Sumber data: Firestore. Tambah, edit, dan nonaktifkan karyawan langsung tersimpan ke database.</div>
+    <div class="hint">Sumber data: Firestore. Tambah, edit, dan hapus karyawan langsung tersimpan ke database. Jenis kelamin hanya bisa diubah via form Edit.</div>
     <div class="flex-between" style="margin-bottom:12px">
       <input type="text" id="empSearch" placeholder="🔍 Cari nama / divisi / jabatan..." style="max-width:300px" oninput="renderEmpTable()">
       <button class="btn small" onclick="addEmployee()">+ Tambah Karyawan</button>
@@ -1036,8 +1036,8 @@ function renderEmpTable(){
       const active=e.aktif!==false;
       return `<tr><td>${e.no}</td><td><b>${esc(e.nama)}</b></td><td>${esc(e.divisi)}</td><td>${esc(e.jabatan)}</td><td>${esc(e.status)}</td>
       <td><span class="pill ${active?'ok':'neutral'}">${active?'Aktif':'Nonaktif'}</span></td>
-      <td><span class="pill ${g==='P'?'p':'l'}" style="cursor:pointer" title="Klik untuk ubah" onclick="toggleGender(${e.no})">${g==='P'?'P • Perempuan':'L • Laki-laki'} ⇄</span></td>
-      <td style="white-space:nowrap"><button class="btn small ghost" onclick="editEmployee(${e.no})">Edit</button> <button class="btn small ghost" onclick="${active?'deleteEmployee':'restoreEmployee'}(${e.no})">${active?'Nonaktifkan':'Aktifkan'}</button></td></tr>`;
+      <td><span class="pill ${g==='P'?'p':'l'}">${g==='P'?'P • Perempuan':'L • Laki-laki'}</span></td>
+      <td style="white-space:nowrap"><button class="btn small ghost" onclick="editEmployee(${e.no})">Edit</button> <button class="btn small ghost" onclick="${active?'deleteEmployee':'restoreEmployee'}(${e.no})">${active?'Hapus':'Pulihkan'}</button></td></tr>`;
     }).join('')+'</tbody>';
 }
 let employeeModalResolve=null;
@@ -1180,14 +1180,14 @@ async function deleteEmployee(no){
     await loadEmployees();
     const e=EMPLOYEES.find(x=>x.no===no);
     if(!e) return toast('Karyawan tidak ditemukan','err');
-    const ok=await openConfirmModal('Nonaktifkan Karyawan', 'Nonaktifkan '+e.nama+'? Data checklist lama tetap aman dan tetap bisa direkap.', 'Nonaktifkan');
+    const ok=await openConfirmModal('Hapus Karyawan', 'Hapus '+e.nama+'? Data checklist lama tetap aman dan tetap bisa direkap (soft delete).', 'Hapus');
     if(!ok) return;
     e.aktif=false;
     await saveEmployees();
     await loadEmployees();
     fillDivisiSelect(); fillEmpSelect(); renderEmpTable(); renderChecklist();
-    toast('Karyawan dinonaktifkan','ok');
-  }catch(e){ toast('Gagal menonaktifkan karyawan','err'); }
+    toast('Karyawan dihapus (soft delete)','ok');
+  }catch(e){ toast('Gagal menghapus karyawan','err'); }
 }
 async function restoreEmployee(no){
   try{
@@ -1198,23 +1198,8 @@ async function restoreEmployee(no){
     await saveEmployees();
     await loadEmployees();
     fillDivisiSelect(); fillEmpSelect(); renderEmpTable(); renderChecklist();
-    toast('Karyawan diaktifkan kembali','ok');
-  }catch(e){ toast('Gagal mengaktifkan karyawan','err'); }
-}
-async function toggleGender(no){
-  try{
-    await loadEmployees();
-    const gm=getGenderMap();
-    const e=EMPLOYEES.find(x=>x.no===no);
-    if(!e) return;
-    gm[no]=empGender(e)==='P'?'L':'P';
-    e.gender=gm[no];
-    setGenderMap({...gm});
-    await saveEmployees();
-    await loadEmployees();
-    renderEmpTable(); renderChecklist();
-    toast('Jenis kelamin diperbarui','ok');
-  }catch(e){ toast('Gagal memperbarui jenis kelamin','err'); }
+    toast('Karyawan dipulihkan','ok');
+  }catch(e){ toast('Gagal memulihkan karyawan','err'); }
 }
 
 /* ================= INIT ================= */
