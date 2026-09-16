@@ -323,7 +323,10 @@ noscript .nojs-warn{display:block!important}
     <h2>Data Karyawan SSC</h2>
     <div class="hint">Sumber data: Firestore. Tambah, edit, dan hapus karyawan langsung tersimpan ke database. Jenis kelamin hanya bisa diubah via form Edit.</div>
     <div class="flex-between" style="margin-bottom:12px">
-      <input type="text" id="empSearch" placeholder="🔍 Cari nama / divisi / jabatan..." style="max-width:300px" oninput="renderEmpTable()">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <input type="text" id="empSearch" placeholder="🔍 Cari nama / divisi / jabatan..." style="max-width:300px" oninput="renderEmpTable()">
+        <button class="btn small ghost" id="btnShowDeleted" onclick="showDeletedEmployees=!showDeletedEmployees;renderEmpTable()">Tampilkan Dihapus</button>
+      </div>
       <button class="btn small" onclick="addEmployee()">+ Tambah Karyawan</button>
     </div>
     <div class="tbl-wrap"><table id="empTbl"></table></div>
@@ -1021,24 +1024,28 @@ function exportExcel(){
 }
 
 /* ================= DATA KARYAWAN ================= */
+let showDeletedEmployees = false;
 function renderEmpTable(){
   const q=(document.getElementById('empSearch').value||'').toLowerCase();
   const gm=getGenderMap();
-  const list=EMPLOYEES.filter(e=>!q||e.nama.toLowerCase().includes(q)||e.divisi.toLowerCase().includes(q)||e.jabatan.toLowerCase().includes(q));
+  let list=EMPLOYEES.filter(e=>!q||e.nama.toLowerCase().includes(q)||e.divisi.toLowerCase().includes(q)||e.jabatan.toLowerCase().includes(q));
+  if(!showDeletedEmployees) list = list.filter(e=>e.aktif!==false);
   if(!EMPLOYEES.length){
     document.getElementById('empTbl').innerHTML = '<tbody><tr><td><div class="empty-note">Data karyawan belum termuat dari Firestore.</div></td></tr></tbody>';
     return;
   }
   document.getElementById('empTbl').innerHTML=
-    '<thead><tr><th>No</th><th>Nama</th><th>Divisi</th><th>Jabatan</th><th>Status</th><th>Aktif</th><th>Jenis Kelamin</th><th>Aksi</th></tr></thead><tbody>'+
+    '<thead><tr><th>No</th><th>Nama</th><th>Divisi</th><th>Jabatan</th><th>Status</th><th>Jenis Kelamin</th><th>Aksi</th></tr></thead><tbody>'+
     list.map(e=>{
       const g=empGender(e);
       const active=e.aktif!==false;
-      return `<tr><td>${e.no}</td><td><b>${esc(e.nama)}</b></td><td>${esc(e.divisi)}</td><td>${esc(e.jabatan)}</td><td>${esc(e.status)}</td>
-      <td><span class="pill ${active?'ok':'neutral'}">${active?'Aktif':'Nonaktif'}</span></td>
-      <td><span class="pill ${g==='P'?'p':'l'}">${g==='P'?'P • Perempuan':'L • Laki-laki'}</span></td>
+      return `<tr${!active?' style="opacity:.5"':''}><td>${e.no}</td><td><b>${esc(e.nama)}</b></td><td>${esc(e.divisi)}</td><td>${esc(e.jabatan)}</td><td>${esc(e.status)}</td>
+      <td><span class="pill ${g==='P'?'p':'l'}">${g==='P'?'P':'L'}</span></td>
       <td style="white-space:nowrap"><button class="btn small ghost" onclick="editEmployee(${e.no})">Edit</button> <button class="btn small ghost" onclick="${active?'deleteEmployee':'restoreEmployee'}(${e.no})">${active?'Hapus':'Pulihkan'}</button></td></tr>`;
     }).join('')+'</tbody>';
+  
+  const showDelBtn = document.getElementById('btnShowDeleted');
+  if(showDelBtn) showDelBtn.textContent = showDeletedEmployees ? 'Sembunyikan Dihapus' : 'Tampilkan Dihapus';
 }
 let employeeModalResolve=null;
 let confirmModalResolve=null;
