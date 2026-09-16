@@ -140,8 +140,8 @@ noscript .nojs-warn{display:block!important}
 .dd{position:relative}
 .dd-btn{width:100%;display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 12px;border:1.5px solid var(--line);border-radius:10px;background:#fff;font-size:13.5px;font-family:inherit;cursor:pointer;text-align:left;color:var(--ink);min-height:44px}
 .dd-btn:focus{outline:none;border-color:var(--red)}
-.dd-btn .dd-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
-.dd-caret{color:var(--red);font-size:11px;flex-shrink:0}
+.dd-btn .dd-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;padding-right:24px}
+.dd-caret{color:var(--red);font-size:11px;flex-shrink:0;margin-left:8px}
 .dd-panel{display:none;position:absolute;top:100%;left:0;right:0;z-index:70;background:#fff;border:1.5px solid var(--red);border-radius:12px;margin-top:4px;box-shadow:0 12px 32px rgba(140,10,30,.22);overflow:hidden}
 .dd-panel.open{display:block}
 .dd-panel > input{border:none!important;border-bottom:1.5px solid var(--line)!important;border-radius:0!important}
@@ -337,7 +337,7 @@ noscript .nojs-warn{display:block!important}
     <form id="employeeForm" onsubmit="submitEmployeeModal(event)">
       <div class="modal-head">
         <h3 id="employeeModalTitle">Tambah Karyawan</h3>
-        <button type="button" class="btn small ghost" onclick="closeEmployeeModal(null)">Tutup</button>
+        <button type="button" class="btn small ghost" onclick="closeEmployeeModal(null)">X</button>
       </div>
       <div class="modal-body">
         <div class="grid g3">
@@ -396,7 +396,7 @@ noscript .nojs-warn{display:block!important}
     <form id="passwordForm" onsubmit="submitPasswordModal(event)">
       <div class="modal-head">
         <h3 id="passwordModalTitle">Ubah Password</h3>
-        <button type="button" class="btn small ghost" onclick="closePasswordModal(null)">Tutup</button>
+        <button type="button" class="btn small ghost" onclick="closePasswordModal(null)">X</button>
       </div>
       <div class="modal-body">
         <div class="grid">
