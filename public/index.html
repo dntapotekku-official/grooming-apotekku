@@ -153,6 +153,22 @@ noscript .nojs-warn{display:block!important}
 .dd-item small{color:var(--muted);font-size:11px;display:block}
 .dd-empty{padding:16px;text-align:center;color:var(--muted);font-size:12.5px}
 @media(max-width:640px){ .dd-btn{min-height:50px;font-size:14px} .dd-item{min-height:52px} }
+
+/* ===== MODAL ===== */
+.modal-backdrop{display:none;position:fixed;inset:0;background:rgba(43,26,29,.48);z-index:180;align-items:center;justify-content:center;padding:18px}
+.modal-backdrop.show{display:flex}
+.modal-box{width:min(560px,100%);max-height:calc(100vh - 36px);overflow:auto;background:#fff;border-radius:14px;border:1px solid var(--line);box-shadow:0 20px 70px rgba(43,26,29,.35)}
+.modal-head{padding:16px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:12px}
+.modal-head h3{font-size:16px;color:var(--red-dark);margin:0}
+.modal-body{padding:18px}
+.modal-actions{padding:14px 18px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap}
+.choice-row{display:flex;gap:8px;flex-wrap:wrap}
+.choice-row label{margin:0;letter-spacing:0;text-transform:none;color:var(--ink);font-size:13px;font-weight:700}
+.choice-row input{position:absolute;opacity:0;pointer-events:none}
+.choice-row span{display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:9px 14px;border:1.5px solid var(--line);border-radius:10px;background:#fff;cursor:pointer}
+.choice-row input:checked + span{border-color:var(--red);background:var(--red-soft);color:var(--red-dark);box-shadow:0 2px 8px rgba(200,16,46,.14)}
+.modal-error{display:none;background:var(--warn-soft);color:var(--warn);border:1px solid var(--red-mid);border-radius:10px;padding:9px 12px;font-size:12.5px;font-weight:700;margin-top:12px}
+.modal-error.show{display:block}
 </style>
 </head>
 <body>
@@ -315,6 +331,89 @@ noscript .nojs-warn{display:block!important}
 </div>
 </main>
 
+<!-- ================= MODAL KARYAWAN ================= -->
+<div class="modal-backdrop" id="employeeModal">
+  <div class="modal-box">
+    <form id="employeeForm" onsubmit="submitEmployeeModal(event)">
+      <div class="modal-head">
+        <h3 id="employeeModalTitle">Tambah Karyawan</h3>
+        <button type="button" class="btn small ghost" onclick="closeEmployeeModal(null)">Tutup</button>
+      </div>
+      <div class="modal-body">
+        <div class="grid g3">
+          <div style="grid-column:1/-1">
+            <label>Nama Karyawan</label>
+            <input type="text" id="empFormNama" autocomplete="off" required>
+          </div>
+          <div>
+            <label>Divisi</label>
+            <select id="empFormDivisi" onchange="toggleEmployeeOther('Divisi')" required></select>
+            <input type="text" id="empFormDivisiOther" placeholder="Tulis divisi baru..." style="display:none;margin-top:8px">
+          </div>
+          <div>
+            <label>Jabatan</label>
+            <select id="empFormJabatan" onchange="toggleEmployeeOther('Jabatan')" required></select>
+            <input type="text" id="empFormJabatanOther" placeholder="Tulis jabatan baru..." style="display:none;margin-top:8px">
+          </div>
+          <div>
+            <label>Status</label>
+            <div class="choice-row">
+              <label><input type="radio" name="empFormStatus" value="TETAP"><span>TETAP</span></label>
+              <label><input type="radio" name="empFormStatus" value="TIDAK TETAP"><span>TIDAK TETAP</span></label>
+            </div>
+          </div>
+          <div>
+            <label>Jenis Kelamin</label>
+            <div class="choice-row">
+              <label><input type="radio" name="empFormGender" value="P"><span>PEREMPUAN</span></label>
+              <label><input type="radio" name="empFormGender" value="L"><span>LAKI-LAKI</span></label>
+            </div>
+          </div>
+        </div>
+        <div class="modal-error" id="employeeModalError"></div>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn ghost" onclick="closeEmployeeModal(null)">Batal</button>
+        <button type="submit" class="btn" id="employeeModalSubmit">Simpan</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="confirmModal">
+  <div class="modal-box" style="max-width:420px">
+    <div class="modal-head"><h3 id="confirmTitle">Konfirmasi</h3></div>
+    <div class="modal-body"><div id="confirmMessage" style="font-size:13.5px;line-height:1.55"></div></div>
+    <div class="modal-actions">
+      <button type="button" class="btn ghost" onclick="closeConfirmModal(false)">Batal</button>
+      <button type="button" class="btn" id="confirmOk" onclick="closeConfirmModal(true)">Lanjutkan</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="passwordModal">
+  <div class="modal-box" style="max-width:460px">
+    <form id="passwordForm" onsubmit="submitPasswordModal(event)">
+      <div class="modal-head">
+        <h3 id="passwordModalTitle">Ubah Password</h3>
+        <button type="button" class="btn small ghost" onclick="closePasswordModal(null)">Tutup</button>
+      </div>
+      <div class="modal-body">
+        <div class="grid">
+          <div><label>Password Lama</label><input type="password" id="passOld" autocomplete="current-password" required></div>
+          <div><label>Password Baru</label><input type="password" id="passNew" autocomplete="new-password" required></div>
+          <div><label>Ulangi Password Baru</label><input type="password" id="passNew2" autocomplete="new-password" required></div>
+        </div>
+        <div class="modal-error" id="passwordModalError"></div>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn ghost" onclick="closePasswordModal(null)">Batal</button>
+        <button type="submit" class="btn">Simpan Password</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <div id="toast"></div>
 <script>
 /* ================= DATA KARYAWAN (Firestore) ================= */
@@ -399,11 +498,13 @@ async function changePass(){
   const a = AUDITORS.find(x=>x.id===pickedAuditor);
   if(!a){ toast('Data auditor belum tersedia','err'); return; }
   const pm = await getPassMap();
-  const cur = prompt('Ubah password '+a.jabatan+'\n\nMasukkan password LAMA:'); if(cur===null) return;
+  const form = await openPasswordModal(a);
+  if(!form) return;
+  const cur = form.cur;
   if(cur !== (pm[pickedAuditor]||DEFAULT_PASS)){ toast('Password lama salah','err'); return; }
-  const nw = prompt('Masukkan password BARU (min. 4 karakter):'); if(nw===null) return;
+  const nw = form.nw;
   if(nw.trim().length<4){ toast('Password baru minimal 4 karakter','err'); return; }
-  const nw2 = prompt('Ulangi password baru:'); if(nw2===null) return;
+  const nw2 = form.nw2;
   if(nw!==nw2){ toast('Konfirmasi password tidak sama','err'); return; }
   pm[pickedAuditor] = nw.trim();
   try{ await setPassMap(pm); toast('Password '+a.jabatan+' berhasil diubah','ok'); }
@@ -777,9 +878,10 @@ function renderChecklist0(){ // re-render keeping current
   const emp=selectedEmp(); if(!emp) return;
   Object.keys(current).forEach(id=>{ const row=document.getElementById('row-'+id); if(row) mark(id,current[id]); });
 }
-function deleteChecklist(){
+async function deleteChecklist(){
   const dateStr=document.getElementById('chkDate').value, emp=selectedEmp();
-  if(!confirm('Hapus checklist '+emp.nama+' tanggal '+dateStr+'?')) return;
+  const ok=await openConfirmModal('Hapus Checklist', 'Hapus checklist '+emp.nama+' tanggal '+dateStr+'?', 'Hapus');
+  if(!ok) return;
   const rec=getRecords();
   if(rec[dateStr]){ delete rec[dateStr][emp.no]; if(!Object.keys(rec[dateStr]).length) delete rec[dateStr]; }
   setRecords(rec, dateStr); toast('Data dihapus','ok'); renderChecklist();
@@ -938,20 +1040,117 @@ function renderEmpTable(){
       <td style="white-space:nowrap"><button class="btn small ghost" onclick="editEmployee(${e.no})">Edit</button> <button class="btn small ghost" onclick="${active?'deleteEmployee':'restoreEmployee'}(${e.no})">${active?'Nonaktifkan':'Aktifkan'}</button></td></tr>`;
     }).join('')+'</tbody>';
 }
-function readEmployeeForm(base){
-  const nama=prompt('Nama karyawan:', base?.nama||''); if(nama===null) return null;
-  const divisi=prompt('Divisi:', base?.divisi||''); if(divisi===null) return null;
-  const jabatan=prompt('Jabatan:', base?.jabatan||''); if(jabatan===null) return null;
-  const status=prompt('Status:', base?.status||'TETAP'); if(status===null) return null;
-  const gender=(prompt('Jenis kelamin (P/L):', base?.gender||guessGender(nama))||'').trim().toUpperCase();
-  if(!nama.trim()||!divisi.trim()||!jabatan.trim()||!status.trim()){ toast('Nama, divisi, jabatan, dan status wajib diisi','err'); return null; }
-  if(gender!=='P'&&gender!=='L'){ toast('Jenis kelamin harus P atau L','err'); return null; }
-  return {nama:nama.trim().toUpperCase(), divisi:divisi.trim().toUpperCase(), jabatan:jabatan.trim().toUpperCase(), status:status.trim().toUpperCase(), gender};
+let employeeModalResolve=null;
+let confirmModalResolve=null;
+let passwordModalResolve=null;
+function uniqueEmployeeOptions(field, current){
+  const values=[...new Set(EMPLOYEES.map(e=>e[field]).filter(Boolean))].sort();
+  if(current && !values.includes(current)) values.unshift(current);
+  return values;
+}
+function fillEmployeeSelect(id, values, current){
+  const el=document.getElementById(id);
+  el.innerHTML=values.map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join('')+'<option value="__other">Lainnya...</option>';
+  el.value=values.includes(current)?current:(values[0]||'__other');
+}
+function toggleEmployeeOther(which){
+  const sel=document.getElementById('empForm'+which);
+  const other=document.getElementById('empForm'+which+'Other');
+  const show=sel.value==='__other';
+  other.style.display=show?'block':'none';
+  other.required=show;
+  if(show) setTimeout(()=>other.focus(),30);
+}
+function setEmployeeRadio(name, value){
+  document.querySelectorAll(`input[name="${name}"]`).forEach(r=>{ r.checked=r.value===value; });
+}
+function employeeModalError(msg){
+  const el=document.getElementById('employeeModalError');
+  el.textContent=msg||'';
+  el.classList.toggle('show',!!msg);
+}
+function openEmployeeModal(base, title){
+  return new Promise(resolve=>{
+    employeeModalResolve=resolve;
+    employeeModalError('');
+    document.getElementById('employeeModalTitle').textContent=title;
+    document.getElementById('employeeModalSubmit').textContent=base?.no?'Simpan Perubahan':'Tambah Karyawan';
+    document.getElementById('empFormNama').value=base?.nama||'';
+    fillEmployeeSelect('empFormDivisi', uniqueEmployeeOptions('divisi', base?.divisi), base?.divisi);
+    fillEmployeeSelect('empFormJabatan', uniqueEmployeeOptions('jabatan', base?.jabatan), base?.jabatan);
+    document.getElementById('empFormDivisiOther').value='';
+    document.getElementById('empFormJabatanOther').value='';
+    toggleEmployeeOther('Divisi');
+    toggleEmployeeOther('Jabatan');
+    setEmployeeRadio('empFormStatus', base?.status==='TIDAK TETAP'?'TIDAK TETAP':'TETAP');
+    setEmployeeRadio('empFormGender', base?.gender||guessGender(base?.nama||''));
+    document.getElementById('employeeModal').classList.add('show');
+    setTimeout(()=>document.getElementById('empFormNama').focus(),50);
+  });
+}
+function closeEmployeeModal(value){
+  document.getElementById('employeeModal').classList.remove('show');
+  if(employeeModalResolve){ employeeModalResolve(value); employeeModalResolve=null; }
+}
+function submitEmployeeModal(ev){
+  ev.preventDefault();
+  const nama=document.getElementById('empFormNama').value.trim();
+  const divSel=document.getElementById('empFormDivisi').value;
+  const jabSel=document.getElementById('empFormJabatan').value;
+  const divisi=(divSel==='__other'?document.getElementById('empFormDivisiOther').value:divSel).trim();
+  const jabatan=(jabSel==='__other'?document.getElementById('empFormJabatanOther').value:jabSel).trim();
+  const status=document.querySelector('input[name="empFormStatus"]:checked')?.value||'';
+  const gender=document.querySelector('input[name="empFormGender"]:checked')?.value||'';
+  if(!nama||!divisi||!jabatan) return employeeModalError('Nama, divisi, dan jabatan wajib diisi.');
+  if(!status) return employeeModalError('Pilih status karyawan.');
+  if(!gender) return employeeModalError('Pilih jenis kelamin.');
+  closeEmployeeModal({nama:nama.toUpperCase(), divisi:divisi.toUpperCase(), jabatan:jabatan.toUpperCase(), status, gender});
+}
+function openConfirmModal(title, message, okText){
+  return new Promise(resolve=>{
+    confirmModalResolve=resolve;
+    document.getElementById('confirmTitle').textContent=title;
+    document.getElementById('confirmMessage').textContent=message;
+    document.getElementById('confirmOk').textContent=okText||'Lanjutkan';
+    document.getElementById('confirmModal').classList.add('show');
+  });
+}
+function closeConfirmModal(value){
+  document.getElementById('confirmModal').classList.remove('show');
+  if(confirmModalResolve){ confirmModalResolve(value); confirmModalResolve=null; }
+}
+function passwordModalError(msg){
+  const el=document.getElementById('passwordModalError');
+  el.textContent=msg||'';
+  el.classList.toggle('show',!!msg);
+}
+function openPasswordModal(a){
+  return new Promise(resolve=>{
+    passwordModalResolve=resolve;
+    passwordModalError('');
+    document.getElementById('passwordModalTitle').textContent='Ubah Password '+a.jabatan;
+    ['passOld','passNew','passNew2'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('passwordModal').classList.add('show');
+    setTimeout(()=>document.getElementById('passOld').focus(),50);
+  });
+}
+function closePasswordModal(value){
+  document.getElementById('passwordModal').classList.remove('show');
+  if(passwordModalResolve){ passwordModalResolve(value); passwordModalResolve=null; }
+}
+function submitPasswordModal(ev){
+  ev.preventDefault();
+  const cur=document.getElementById('passOld').value;
+  const nw=document.getElementById('passNew').value;
+  const nw2=document.getElementById('passNew2').value;
+  if(nw.trim().length<4) return passwordModalError('Password baru minimal 4 karakter.');
+  if(nw!==nw2) return passwordModalError('Konfirmasi password tidak sama.');
+  closePasswordModal({cur,nw,nw2});
 }
 async function addEmployee(){
   try{
     await loadEmployees();
-    const data=readEmployeeForm({gender:'P',status:'TETAP'});
+    const data=await openEmployeeModal({gender:'P',status:'TETAP'}, 'Tambah Karyawan');
     if(!data) return;
     EMPLOYEES.push({no:nextEmployeeNo(), aktif:true, ...data});
     EMPLOYEES=normalizeEmployees(EMPLOYEES);
@@ -966,7 +1165,7 @@ async function editEmployee(no){
     await loadEmployees();
     const idx=EMPLOYEES.findIndex(x=>x.no===no);
     if(idx<0) return toast('Karyawan tidak ditemukan','err');
-    const data=readEmployeeForm(EMPLOYEES[idx]);
+    const data=await openEmployeeModal(EMPLOYEES[idx], 'Edit Karyawan');
     if(!data) return;
     EMPLOYEES[idx]={...EMPLOYEES[idx], ...data};
     EMPLOYEES=normalizeEmployees(EMPLOYEES);
@@ -977,11 +1176,12 @@ async function editEmployee(no){
   }catch(e){ toast('Gagal memperbarui karyawan','err'); }
 }
 async function deleteEmployee(no){
-  if(!confirm('Nonaktifkan karyawan ini? Data checklist lama tetap aman.')) return;
   try{
     await loadEmployees();
     const e=EMPLOYEES.find(x=>x.no===no);
     if(!e) return toast('Karyawan tidak ditemukan','err');
+    const ok=await openConfirmModal('Nonaktifkan Karyawan', 'Nonaktifkan '+e.nama+'? Data checklist lama tetap aman dan tetap bisa direkap.', 'Nonaktifkan');
+    if(!ok) return;
     e.aktif=false;
     await saveEmployees();
     await loadEmployees();
