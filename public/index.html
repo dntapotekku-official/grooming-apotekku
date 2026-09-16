@@ -170,16 +170,7 @@ noscript .nojs-warn{display:block!important}
     <h2 style="color:var(--red-dark);font-size:20px;margin-bottom:4px">GROOMING 57 TITIK APOTEKKU</h2>
     <div style="font-size:12px;color:var(--muted);letter-spacing:.6px;text-transform:uppercase;margin-bottom:22px">Login Auditor — Checklist Grooming SSC</div>
     <div style="text-align:left"><label>Pilih Auditor</label></div>
-    <div id="auditorList" style="display:grid;gap:10px;margin:6px 0 18px">
-      <div onclick="pickAuditor('ceo')" id="aud-ceo" style="border:2px solid var(--line);border-radius:14px;padding:14px 16px;cursor:pointer;display:flex;align-items:center;gap:12px;transition:.15s;text-align:left;min-height:60px">
-        <div style="width:42px;height:42px;border-radius:12px;background:var(--red-soft);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">👨‍💼</div>
-        <div><b style="font-size:13.5px;color:var(--ink)">apt. I Gede Purna Yogi Suara, S.Si</b><div style="font-size:11.5px;color:var(--red);font-weight:700">CEO ApotekKU</div></div>
-      </div>
-      <div onclick="pickAuditor('coo')" id="aud-coo" style="border:2px solid var(--line);border-radius:14px;padding:14px 16px;cursor:pointer;display:flex;align-items:center;gap:12px;transition:.15s;text-align:left;min-height:60px">
-        <div style="width:42px;height:42px;border-radius:12px;background:var(--red-soft);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">🧑‍💼</div>
-        <div><b style="font-size:13.5px;color:var(--ink)">apt. I Putu Cahya Swandhika Negara, S.Farm</b><div style="font-size:11.5px;color:var(--red);font-weight:700">COO ApotekKU</div></div>
-      </div>
-    </div>
+    <div id="auditorList" style="display:grid;gap:10px;margin:6px 0 18px"></div>
     <div style="text-align:left"><label>Password</label></div>
     <div style="position:relative;margin:6px 0 18px">
       <input type="password" id="loginPass" placeholder="Masukkan password" autocomplete="current-password" style="width:100%;padding:13px 46px 13px 14px;border:2px solid var(--line);border-radius:12px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box" onkeydown="if(event.key==='Enter'&&!document.getElementById('btnLogin').disabled)doLogin()">
@@ -313,8 +304,8 @@ noscript .nojs-warn{display:block!important}
 <!-- ================= KARYAWAN ================= -->
 <div class="page" id="page-karyawan">
   <div class="card">
-    <h2>Data Karyawan SSC — Mei 2026</h2>
-    <div class="hint">Sumber: sheet "Mei 2026". Jenis kelamin ditebak otomatis dari nama — <b>klik pill P/L untuk mengoreksi</b> (memengaruhi aturan anting & makeup pada checklist).</div>
+    <h2>Data Karyawan SSC</h2>
+    <div class="hint">Sumber data: Firestore. Jenis kelamin dapat dikoreksi dengan klik pill P/L (memengaruhi aturan anting & makeup pada checklist).</div>
     <input type="text" id="empSearch" placeholder="🔍 Cari nama / divisi / jabatan..." style="max-width:300px;margin-bottom:12px" oninput="renderEmpTable()">
     <div class="tbl-wrap"><table id="empTbl"></table></div>
   </div>
@@ -323,8 +314,22 @@ noscript .nojs-warn{display:block!important}
 
 <div id="toast"></div>
 <script>
-/* ================= DATA KARYAWAN (Sheet Mei 2026) ================= */
-const BASE_EMPLOYEES = [{"no":1,"nama":"APT. NI KETUT SUWEDARMI PUTRI, S.FARM","divisi":"INVENTORY, SUPPLY CHAIN & MERCHANDISE","jabatan":"MANAGER","status":"TETAP"},{"no":2,"nama":"I KETUT PANJI MAHARTHA","divisi":"REVENUE AND GROWH (B2C)","jabatan":"MANAGER","status":"TETAP"},{"no":3,"nama":"APT. PUTU DHYANTI PRATIWI UTAMI, S.FARM","divisi":"HUMAN GROWTH & GA","jabatan":"MANAGER","status":"TETAP"},{"no":4,"nama":"ELSA GAOTAMI","divisi":"REVENUE AND GROWH (B2B)","jabatan":"MANAGER","status":"TETAP"},{"no":5,"nama":"APT. I MADE MYASA DARMIKA, S.FARM","divisi":"NEW STORE, LEGAL & REGULASI","jabatan":"MANAGER","status":"TETAP"},{"no":6,"nama":"DEWA AYU GANDHI PRATIWI","divisi":"MARKETING, BRANDING & COSTUMER ENGAGEMENT","jabatan":"MANAGER","status":"TETAP"},{"no":7,"nama":"NI PUTU PRADNYAWATI","divisi":"FINANCE, ACCOUNTING AND TAX","jabatan":"MANAGER","status":"TETAP"},{"no":8,"nama":"APT. NI PUTU MONICA ROSDIANA DEWI PARAMITHA, S.FARM.","divisi":"QUALITY ASSURANCE & COMPLIANCE","jabatan":"MANAGER","status":"TETAP"},{"no":9,"nama":"APT. I GUSTI KADEK SURYA AMERTHA, S. FARM.","divisi":"OPERASIONAL & GPP EXCELLENCE","jabatan":"MANAGER","status":"TETAP"},{"no":10,"nama":"RATIH DYANTARI","divisi":"HUMAN GROWTH & GA","jabatan":"OFFICER","status":"TETAP"},{"no":11,"nama":"I PUTU EKO ARYMANTO WIRA KESUMA","divisi":"INVENTORY, SUPPLY CHAIN & MERCHANDISE","jabatan":"OFFICER","status":"TETAP"},{"no":12,"nama":"I PUTU DARMA YUDHA","divisi":"INVENTORY, SUPPLY CHAIN & MERCHANDISE","jabatan":"OFFICER","status":"TETAP"},{"no":13,"nama":"ASRI WELAS PANGESTU","divisi":"REVENUE AND GROWH (B2B)","jabatan":"OFFICER","status":"TETAP"},{"no":14,"nama":"TEOFILUS JENABU","divisi":"NEW STORE, LEGAL & REGULASI","jabatan":"OFFICER","status":"TETAP"},{"no":15,"nama":"MADE DIO LOKANTARA","divisi":"OPERASIONAL & GPP EXCELLENCE","jabatan":"OFFICER","status":"TETAP"},{"no":16,"nama":"MADE KIKI ROSALINA","divisi":"FINANCE, ACCOUNTING AND TAX","jabatan":"OFFICER","status":"TETAP"},{"no":17,"nama":"APT. NI LUH PUTU EVAYANTI, S.FARM","divisi":"HUMAN GROWTH & GA","jabatan":"SUPERVISOR","status":"TETAP"},{"no":18,"nama":"APT. KADEK INTAN PRANANINGTYAS, S.FARM","divisi":"HUMAN GROWTH & GA","jabatan":"SUPERVISOR","status":"TETAP"},{"no":19,"nama":"I PUTU YOGI ANTARA","divisi":"FINANCE, ACCOUNTING AND TAX","jabatan":"SUPERVISOR","status":"TETAP"},{"no":20,"nama":"I MADE DONI PALGUNA, S.M (AUDIT)","divisi":"QUALITY ASSURANCE & COMPLIANCE","jabatan":"SUPERVISOR","status":"TETAP"},{"no":21,"nama":"NI MADE INDAH RISMAWATI","divisi":"FINANCE, ACCOUNTING AND TAX","jabatan":"SUPERVISOR","status":"TETAP"},{"no":22,"nama":"APT. NI PUTU ARDHIANI KENCANA PUTRI, S.FARM","divisi":"INVENTORY, SUPPLY CHAIN & MERCHANDISE","jabatan":"SUPERVISOR","status":"TETAP"},{"no":23,"nama":"GEDE SUGHANDI","divisi":"DIGITALISASI DAN TRANSFORMASI","jabatan":"SUPERVISOR","status":"TETAP"},{"no":24,"nama":"GUSTI AYU IDA SINTIA DEWI","divisi":"INVENTORY, SUPPLY CHAIN & MERCHANDISE","jabatan":"SUPERVISOR","status":"TETAP"},{"no":25,"nama":"I PUTU AGUS ADITYA SUWAR BUDIARTA","divisi":"DIGITALISASI DAN TRANSFORMASI","jabatan":"SUPERVISOR","status":"TETAP"},{"no":26,"nama":"I GDE ARYA RADITYA ATMAWIJAYA, S.PSI., M.PSI., PSIKOLOG","divisi":"HUMAN GROWTH & GA","jabatan":"SUPERVISOR","status":"TETAP"},{"no":27,"nama":"GUNG ADI CANDRA","divisi":"INVENTORY, SUPPLY CHAIN & MERCHANDISE","jabatan":"SUPERVISOR","status":"TETAP"},{"no":28,"nama":"I GUSTI AYU SRI INDRAYANI","divisi":"INVENTORY, SUPPLY CHAIN & MERCHANDISE","jabatan":"SUPERVISOR","status":"TETAP"},{"no":29,"nama":"I PUTU GITA ARTAWAN","divisi":"OPERASIONAL & GPP EXCELLENCE","jabatan":"SUPERVISOR","status":"TETAP"},{"no":30,"nama":"NI PUTU AYU NITA PRACINTI","divisi":"FINANCE, ACCOUNTING AND TAX","jabatan":"SUPERVISOR","status":"TETAP"},{"no":31,"nama":"I PUTU PRAYOGA MEITIANTARA","divisi":"REVENUE AND GROWH (B2C)","jabatan":"SUPERVISOR","status":"TETAP"},{"no":32,"nama":"KADEK RATIH SUPALA, A.MD","divisi":"INVENTORY, SUPPLY CHAIN & MERCHANDISE","jabatan":"SUPERVISOR","status":"TETAP"},{"no":33,"nama":"PANDE PUTU GEDE ADITYA","divisi":"REVENUE AND GROWH (B2C)","jabatan":"SUPERVISOR","status":"TETAP"},{"no":34,"nama":"NI KOMANG ITA WIRAYANTI","divisi":"FINANCE, ACCOUNTING AND TAX","jabatan":"SUPERVISOR","status":"TETAP"},{"no":35,"nama":"NI PUTU RISMA YANI, A.MD.FARM","divisi":"INVENTORY, SUPPLY CHAIN & MERCHANDISE","jabatan":"SUPERVISOR","status":"TETAP"},{"no":36,"nama":"APT. DEWA AYU MADE DWI DESSY ARI, S.FARM","divisi":"HUMAN GROWTH & GA","jabatan":"SUPERVISOR","status":"TETAP"},{"no":37,"nama":"I NYOMAN FERRY WIRANTIKA PUTRA","divisi":"OPERASIONAL & GPP EXCELLENCE","jabatan":"SUPERVISOR","status":"TETAP"},{"no":38,"nama":"KOMANG VIDYA DEVI AYU LAKSMI","divisi":"MARKETING, BRANDING & COSTUMER ENGAGEMENT","jabatan":"SUPERVISOR","status":"TETAP"},{"no":39,"nama":"PUTU SRI VINIA CAHYANTARI, SM","divisi":"FINANCE, ACCOUNTING AND TAX","jabatan":"SUPERVISOR","status":"TETAP"},{"no":40,"nama":"APT. NI MADE ATIKA SARASWATI, S.FARM","divisi":"HUMAN GROWTH & GA","jabatan":"SUPERVISOR","status":"TETAP"},{"no":41,"nama":"NI NYOMAN MARITA PURNAMA DEWI","divisi":"MARKETING, BRANDING & COSTUMER ENGAGEMENT","jabatan":"SUPERVISOR","status":"TETAP"},{"no":42,"nama":"NI KADEK LARAS PUSPADEWI","divisi":"FINANCE, ACCOUNTING AND TAX","jabatan":"SUPERVISOR","status":"TETAP"},{"no":43,"nama":"NI MADE MULIANI","divisi":"INVENTORY, SUPPLY CHAIN & MERCHANDISE","jabatan":"SUPERVISOR","status":"TETAP"},{"no":44,"nama":"NI PUTU MITHA KUSUMADWI S. KOM","divisi":"HUMAN GROWTH & GA","jabatan":"SUPERVISOR","status":"TETAP"},{"no":45,"nama":"IDA AYU MADE CITRA SWANDEWI","divisi":"MARKETING, BRANDING & COSTUMER ENGAGEMENT","jabatan":"SUPERVISOR","status":"TETAP"},{"no":46,"nama":"NI MADE ENI TRISNAYANTI, S.TR.AKT","divisi":"FINANCE, ACCOUNTING AND TAX","jabatan":"SUPERVISOR","status":"TETAP"},{"no":47,"nama":"VINCA ANELIA, AMD, FARM.","divisi":"INVENTORY, SUPPLY CHAIN & MERCHANDISE","jabatan":"SUPERVISOR","status":"TIDAK TETAP"},{"no":48,"nama":"JOHAN LIE, AMD, FARM.","divisi":"NEW STORE, LEGAL & REGULASI","jabatan":"SUPERVISOR","status":"TIDAK TETAP"},{"no":49,"nama":"APT. NI MADE MARISA KUMALA, S. FARM.","divisi":"QUALITY ASSURANCE & COMPLIANCE","jabatan":"SUPERVISOR","status":"TIDAK TETAP"},{"no":50,"nama":"APT. IDA BAGUS ADI SANTIKARA, S.FARM.","divisi":"REVENUE AND GROWH (B2B)","jabatan":"SUPERVISOR","status":"TIDAK TETAP"},{"no":51,"nama":"NI KADEK WINDARI","divisi":"INVENTORY, SUPPLY CHAIN & MERCHANDISE","jabatan":"SUPERVISOR","status":"TIDAK TETAP"},{"no":52,"nama":"MADE SANDRARINI,S.FARM.,APT","divisi":"QUALITY ASSURANCE & COMPLIANCE","jabatan":"SUPERVISOR","status":"TIDAK TETAP"},{"no":53,"nama":"I KOMANG EGAR SUARAMA DHARMAWANGSA","divisi":"DIGITALISASI DAN TRANSFORMASI","jabatan":"MAGANG","status":"TETAP"}];
+/* ================= DATA KARYAWAN (Firestore) ================= */
+let EMPLOYEES = [];
+function normalizeEmployees(list){
+  return (Array.isArray(list)?list:[])
+    .map(e=>({
+      no:Number(e.no),
+      nama:String(e.nama||'').trim(),
+      divisi:String(e.divisi||'').trim(),
+      jabatan:String(e.jabatan||'').trim(),
+      status:String(e.status||'').trim(),
+      aktif:e.aktif!==false,
+      gender:e.gender==='L'||e.gender==='P'?e.gender:''
+    }))
+    .filter(e=>Number.isFinite(e.no)&&e.nama&&e.aktif)
+    .sort((a,b)=>a.no-b.no);
+}
 
 /* ================= KONSTANTA ================= */
 const DENDA = 20000;
@@ -340,11 +345,19 @@ const FIREBASE_CONFIG = {
 let FB = null; /* instance Firestore saat aktif */
 const IS_FB = typeof firebase!=='undefined' && !!(FIREBASE_CONFIG && FIREBASE_CONFIG.apiKey);
 /* ================= AUDITOR / LOGIN ================= */
-const AUDITORS = [
-  {id:'ceo', nama:'apt. I Gede Purna Yogi Suara, S.Si', jabatan:'CEO ApotekKU'},
-  {id:'coo', nama:'apt. I Putu Cahya Swandhika Negara, S.Farm', jabatan:'COO ApotekKU'}
-];
+let AUDITORS = [];
+function normalizeAuditors(list){
+  return (Array.isArray(list)?list:[])
+    .map(a=>({
+      id:String(a.id||'').trim(),
+      nama:String(a.nama||'').trim(),
+      jabatan:String(a.jabatan||'').trim(),
+      aktif:a.aktif!==false
+    }))
+    .filter(a=>a.id&&a.nama&&a.jabatan&&a.aktif);
+}
 const KEY_AUD = 'apotekku_grooming_auditor';
+const KEY_AUDITORS = 'apotekku_grooming_auditors';
 const KEY_PASS = 'apotekku_grooming_pass';
 const DEFAULT_PASS = 'apotekku';
 async function getPassMap(){
@@ -362,6 +375,7 @@ async function setPassMap(p){
 async function changePass(){
   if(!pickedAuditor){ toast('Pilih auditor terlebih dahulu','err'); return; }
   const a = AUDITORS.find(x=>x.id===pickedAuditor);
+  if(!a){ toast('Data auditor belum tersedia','err'); return; }
   const pm = await getPassMap();
   const cur = prompt('Ubah password '+a.jabatan+'\n\nMasukkan password LAMA:'); if(cur===null) return;
   if(cur !== (pm[pickedAuditor]||DEFAULT_PASS)){ toast('Password lama salah','err'); return; }
@@ -381,11 +395,26 @@ function setAuditor(id){
   else store.set(KEY_AUD, id);
 }
 function auditorName(id){ const a=AUDITORS.find(x=>x.id===id); return a? a.nama+' ('+a.jabatan+')' : (id||'-'); }
-function renderLogin(){/* kartu auditor sudah statis di HTML */}
+function renderLogin(){
+  const el=document.getElementById('auditorList');
+  if(!el) return;
+  if(!AUDITORS.length){
+    el.innerHTML='<div class="empty-note" style="padding:14px 10px">Data auditor belum termuat dari Firestore.</div>';
+    document.getElementById('btnLogin').disabled = true;
+    return;
+  }
+  el.innerHTML=AUDITORS.map(a=>`
+    <div onclick="pickAuditor('${a.id.replace(/'/g,"\\'")}')" id="aud-${esc(a.id)}" style="border:2px solid var(--line);border-radius:14px;padding:14px 16px;cursor:pointer;display:flex;align-items:center;gap:12px;transition:.15s;text-align:left;min-height:60px">
+      <div><b style="font-size:13.5px;color:var(--ink)">${esc(a.nama)}</b><div style="font-size:11.5px;color:var(--red);font-weight:700">${esc(a.jabatan)}</div></div>
+    </div>`).join('');
+  if(pickedAuditor && AUDITORS.some(a=>a.id===pickedAuditor)) pickAuditor(pickedAuditor);
+  else document.getElementById('btnLogin').disabled = true;
+}
 function pickAuditor(id){
   pickedAuditor = id;
   AUDITORS.forEach(a=>{
     const el=document.getElementById('aud-'+a.id);
+    if(!el) return;
     el.style.borderColor = a.id===id? 'var(--red)':'var(--line)';
     el.style.background = a.id===id? 'var(--red-soft)':'#fff';
     el.style.boxShadow = a.id===id? '0 3px 12px rgba(200,16,46,.18)':'none';
@@ -394,6 +423,8 @@ function pickAuditor(id){
 }
 async function doLogin(){
   if(!pickedAuditor) return;
+  const auditor = AUDITORS.find(a=>a.id===pickedAuditor);
+  if(!auditor) return toast('Data auditor belum tersedia','err');
   const inp = document.getElementById('loginPass');
   const btn = document.getElementById('btnLogin');
   btn.disabled = true; btn.textContent = 'Memeriksa...';
@@ -404,7 +435,7 @@ async function doLogin(){
   inp.value = '';
   setAuditor(pickedAuditor);
   applyAuth();
-  toast('Login berhasil — Auditor: '+AUDITORS.find(a=>a.id===pickedAuditor).jabatan,'ok');
+  toast('Login berhasil — Auditor: '+auditor.jabatan,'ok');
 }
 function doLogout(){
   setAuditor(null);
@@ -426,6 +457,7 @@ function applyAuth(){
 }
 
 const rupiah = n => 'Rp ' + (n||0).toLocaleString('id-ID');
+const esc = s => String(s??'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const HARI = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
 const SERAGAM = {
   1:{nama:'Baju BUDAYA', extra:'Rambut wanita: dikepang + pita + baby hairpin'},
@@ -478,6 +510,7 @@ const store = {
 };
 const KEY_REC = 'apotekku_grooming_records';
 const KEY_GEN = 'apotekku_grooming_gender';
+const KEY_EMP = 'apotekku_grooming_employees';
 /* cache memori — sumber kebenaran saat runtime */
 let CACHE = { records:{}, gender:{}, auditor:null };
 let cloudBusy = 0;
@@ -507,6 +540,7 @@ function fbSaveDate(date){
 function refreshActive(){ /* dipanggil saat ada update real-time dari perangkat lain */
   const p=document.querySelector('.page.show'); if(!p) return;
   const id=p.id.replace('page-','');
+  renderLogin(); applyAuth();
   if(id==='dashboard') renderDashboard();
   if(id==='rekap') renderRekap();
   if(id==='karyawan') renderEmpTable();
@@ -532,7 +566,22 @@ function setGenderMap(g){
   if(IS_CLOUD) cloudSave('grooming-gender', g, true);
   else store.set(KEY_GEN, g);
 }
-function empGender(e){ const m=getGenderMap(); return m[e.no]||guessGender(e.nama); }
+function saveEmployees(){
+  const list = EMPLOYEES.map(e=>({...e}));
+  store.set(KEY_EMP, list);
+  if(FB){
+    cloudBusy++; cloudDot(true);
+    FB.collection('grooming').doc('meta-employees').set({list, updatedAt:firebase.firestore.FieldValue.serverTimestamp()})
+      .catch(e=>toast('Gagal menyimpan data karyawan ke Firebase','err'))
+      .finally(()=>{ cloudBusy--; if(cloudBusy<=0) cloudDot(false); });
+    return;
+  }
+  if(IS_CLOUD) cloudSave('grooming-employees', list, true);
+}
+function empGender(e){
+  const m=getGenderMap();
+  return m[e.no]||e.gender||guessGender(e.nama);
+}
 
 /* ================= NAVIGASI ================= */
 function go(p){
@@ -565,10 +614,14 @@ function ddClose(){ document.getElementById('panelDivisi').classList.remove('ope
 function ddRenderDivisi(){
   const q=(document.getElementById('qDivisi').value||'').toLowerCase();
   const cur=document.getElementById('chkDivisi').value;
-  const divs=[...new Set(BASE_EMPLOYEES.map(e=>e.divisi))].sort().filter(d=>!q||d.toLowerCase().includes(q));
-  let html=(!q?`<div class="dd-item ${cur===''?'sel':''}" onclick="pickDivisi('')">— Semua Divisi —<small style="margin-left:auto">${BASE_EMPLOYEES.length} insan</small></div>`:'');
+  if(!EMPLOYEES.length){
+    document.getElementById('listDivisi').innerHTML = '<div class="dd-empty">Data karyawan belum termuat dari Firestore</div>';
+    return;
+  }
+  const divs=[...new Set(EMPLOYEES.map(e=>e.divisi))].sort().filter(d=>!q||d.toLowerCase().includes(q));
+  let html=(!q?`<div class="dd-item ${cur===''?'sel':''}" onclick="pickDivisi('')">— Semua Divisi —<small style="margin-left:auto">${EMPLOYEES.length} insan</small></div>`:'');
   html+=divs.map(d=>{
-    const n=BASE_EMPLOYEES.filter(e=>e.divisi===d).length;
+    const n=EMPLOYEES.filter(e=>e.divisi===d).length;
     return `<div class="dd-item ${cur===d?'sel':''}" onclick="pickDivisi('${d.replace(/'/g,"\\'")}')"><span style="flex:1">${d}</span><small>${n} insan</small></div>`;
   }).join('');
   document.getElementById('listDivisi').innerHTML = html || '<div class="dd-empty">Divisi tidak ditemukan</div>';
@@ -583,7 +636,11 @@ function ddRenderEmp(){
   const q=(document.getElementById('qEmp').value||'').toLowerCase();
   const div=document.getElementById('chkDivisi').value;
   const cur=+document.getElementById('chkEmp').value;
-  const list=BASE_EMPLOYEES.filter(e=>(!div||e.divisi===div)&&(!q||e.nama.toLowerCase().includes(q)||e.divisi.toLowerCase().includes(q)));
+  if(!EMPLOYEES.length){
+    document.getElementById('listEmp').innerHTML = '<div class="dd-empty">Data karyawan belum termuat dari Firestore</div>';
+    return;
+  }
+  const list=EMPLOYEES.filter(e=>(!div||e.divisi===div)&&(!q||e.nama.toLowerCase().includes(q)||e.divisi.toLowerCase().includes(q)));
   document.getElementById('listEmp').innerHTML = list.length? list.map(e=>`
     <div class="dd-item ${cur===e.no?'sel':''}" onclick="pickEmp(${e.no})">
       <div style="width:30px;height:30px;border-radius:8px;background:var(--red);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11px;flex-shrink:0">${e.no}</div>
@@ -591,7 +648,7 @@ function ddRenderEmp(){
     </div>`).join('') : '<div class="dd-empty">Nama tidak ditemukan'+(div?' di divisi ini — coba pilih "Semua Divisi"':'')+'</div>';
 }
 function pickEmp(no){
-  const e=BASE_EMPLOYEES.find(x=>x.no===no); if(!e) return;
+  const e=EMPLOYEES.find(x=>x.no===no); if(!e) return;
   document.getElementById('chkEmp').value=String(no);
   document.getElementById('lblEmp').textContent=e.no+'. '+e.nama;
   ddClose();
@@ -600,8 +657,15 @@ function pickEmp(no){
 function fillDivisiSelect(){ ddRenderDivisi(); }
 function fillEmpSelect(){
   const div=document.getElementById('chkDivisi').value;
-  const list=BASE_EMPLOYEES.filter(e=>!div||e.divisi===div);
+  const list=EMPLOYEES.filter(e=>!div||e.divisi===div);
   const cur=+document.getElementById('chkEmp').value;
+  if(!list.length){
+    document.getElementById('chkEmp').value='';
+    document.getElementById('lblEmp').textContent=EMPLOYEES.length?'Tidak ada insan di divisi ini':'Data karyawan belum termuat';
+    ddRenderEmp();
+    renderChecklist();
+    return;
+  }
   if(!list.some(e=>e.no===cur) && list.length){
     document.getElementById('chkEmp').value=String(list[0].no);
     document.getElementById('lblEmp').textContent=list[0].no+'. '+list[0].nama;
@@ -610,12 +674,19 @@ function fillEmpSelect(){
   renderChecklist();
 }
 document.addEventListener('click',ev=>{ if(!ev.target.closest('.dd')) ddClose(); });
-function selectedEmp(){ const no=+document.getElementById('chkEmp').value; return BASE_EMPLOYEES.find(e=>e.no===no); }
+function selectedEmp(){ const no=+document.getElementById('chkEmp').value; return EMPLOYEES.find(e=>e.no===no); }
 
 function renderChecklist(){
   const dateStr = document.getElementById('chkDate').value;
   const emp = selectedEmp();
-  if(!dateStr||!emp) return;
+  if(!dateStr||!emp){
+    document.getElementById('dayBanner').innerHTML = '<div>Data karyawan belum tersedia.</div>';
+    document.getElementById('chkTitle').textContent = 'Titik Grooming';
+    document.getElementById('chkItems').innerHTML = '<div class="empty-note">Pilih insan SSC setelah data karyawan termuat dari Firestore.</div>';
+    current = {};
+    updateSummary();
+    return;
+  }
   const dow = new Date(dateStr+'T12:00:00').getDay();
   const g = empGender(emp);
   const s = SERAGAM[dow];
@@ -694,7 +765,7 @@ function monthData(ym){ // ym = 'YYYY-MM'
   Object.entries(rec).forEach(([date,byEmp])=>{
     if(!date.startsWith(ym)) return;
     Object.entries(byEmp).forEach(([no,r])=>{
-      const emp=BASE_EMPLOYEES.find(e=>e.no===+no); if(!emp) return;
+      const emp=EMPLOYEES.find(e=>e.no===+no); if(!emp) return;
       const viol=Object.entries(r.items).filter(([,v])=>v===false).map(([k])=>k);
       out.push({date, emp, viol, note:r.note, auditor:r.auditor||''});
     });
@@ -716,7 +787,7 @@ function renderDashboard(){
 
   document.getElementById('dashStats').innerHTML=`
     <div class="stat"><div class="big">${totalChecks}</div><div class="lbl">Total Pemeriksaan</div></div>
-    <div class="stat"><div class="big">${checkedEmp}<span style="font-size:14px;color:var(--muted)">/${BASE_EMPLOYEES.length}</span></div><div class="lbl">Insan Diperiksa</div></div>
+    <div class="stat"><div class="big">${checkedEmp}<span style="font-size:14px;color:var(--muted)">/${EMPLOYEES.length}</span></div><div class="lbl">Insan Diperiksa</div></div>
     <div class="stat red"><div class="big">${totalViol}</div><div class="lbl">Total Pelanggaran</div></div>
     <div class="stat red"><div class="big">${rupiah(totalViol*DENDA)}</div><div class="lbl">Total Denda</div></div>
     <div class="stat green"><div class="big">${comp}%</div><div class="lbl">Pemeriksaan Tanpa Pelanggaran</div></div>`;
@@ -753,7 +824,7 @@ function renderDashboard(){
 function rekapRows(ym){
   const data=monthData(ym);
   const byEmp={};
-  BASE_EMPLOYEES.forEach(e=>byEmp[e.no]={emp:e,checks:0,viol:0,perItem:{},notes:[]});
+  EMPLOYEES.forEach(e=>byEmp[e.no]={emp:e,checks:0,viol:0,perItem:{},notes:[]});
   data.forEach(d=>{
     const b=byEmp[d.emp.no]; b.checks++; b.viol+=d.viol.length;
     d.viol.forEach(v=>b.perItem[v]=(b.perItem[v]||0)+1);
@@ -824,7 +895,11 @@ function exportExcel(){
 function renderEmpTable(){
   const q=(document.getElementById('empSearch').value||'').toLowerCase();
   const gm=getGenderMap();
-  const list=BASE_EMPLOYEES.filter(e=>!q||e.nama.toLowerCase().includes(q)||e.divisi.toLowerCase().includes(q)||e.jabatan.toLowerCase().includes(q));
+  const list=EMPLOYEES.filter(e=>!q||e.nama.toLowerCase().includes(q)||e.divisi.toLowerCase().includes(q)||e.jabatan.toLowerCase().includes(q));
+  if(!EMPLOYEES.length){
+    document.getElementById('empTbl').innerHTML = '<tbody><tr><td><div class="empty-note">Data karyawan belum termuat dari Firestore.</div></td></tr></tbody>';
+    return;
+  }
   document.getElementById('empTbl').innerHTML=
     '<thead><tr><th>No</th><th>Nama</th><th>Divisi</th><th>Jabatan</th><th>Status</th><th>Jenis Kelamin</th></tr></thead><tbody>'+
     list.map(e=>{
@@ -835,9 +910,12 @@ function renderEmpTable(){
 }
 function toggleGender(no){
   const gm=getGenderMap();
-  const e=BASE_EMPLOYEES.find(x=>x.no===no);
+  const e=EMPLOYEES.find(x=>x.no===no);
+  if(!e) return;
   gm[no]=empGender(e)==='P'?'L':'P';
+  e.gender=gm[no];
   setGenderMap({...gm});
+  saveEmployees();
   renderEmpTable(); renderChecklist();
   toast('Jenis kelamin diperbarui','ok');
 }
@@ -856,12 +934,18 @@ function toggleGender(no){
       await new Promise((res,rej)=>{
         let first=true;
         FB.collection('grooming').onSnapshot(snap=>{
-          const rec={}; let gen={};
+          const rec={}; let gen={}; let employees=[]; let auditors=[];
           snap.forEach(d=>{
             if(d.id==='meta-gender') gen=d.data()||{};
+            else if(d.id==='meta-employees') employees=normalizeEmployees((d.data()||{}).list);
+            else if(d.id==='meta-auditors') auditors=normalizeAuditors((d.data()||{}).list);
             else if(d.id.indexOf('rec-')===0) rec[d.id.slice(4)]=d.data()||{};
           });
           CACHE.records=rec; CACHE.gender=gen;
+          EMPLOYEES=employees;
+          AUDITORS=auditors;
+          store.set(KEY_EMP, EMPLOYEES);
+          store.set(KEY_AUDITORS, AUDITORS);
           cloudDot(false);
           if(first){ first=false; res(); } else refreshActive();
         }, err=>{ if(first){ first=false; rej(err); } });
@@ -871,32 +955,44 @@ function toggleGender(no){
       FB = null;
       IS_CLOUD = typeof window!=='undefined' && !!window.storage;
       if(IS_CLOUD){
-        const [rec,gen,aud] = await Promise.all([
+        const [rec,gen,aud,emp,auditors] = await Promise.all([
           cloudLoad('grooming-records', true),
           cloudLoad('grooming-gender', true),
-          cloudLoad('grooming-auditor', false)
+          cloudLoad('grooming-auditor', false),
+          cloudLoad('grooming-employees', true),
+          cloudLoad('grooming-auditors', true)
         ]);
         CACHE.records = rec||{}; CACHE.gender = gen||{}; CACHE.auditor = aud||null;
+        EMPLOYEES = normalizeEmployees(emp||store.get(KEY_EMP)||[]);
+        AUDITORS = normalizeAuditors(auditors||store.get(KEY_AUDITORS)||[]);
       } else {
         CACHE.records = store.get(KEY_REC)||{};
         CACHE.gender  = store.get(KEY_GEN)||{};
         CACHE.auditor = store.get(KEY_AUD)||null;
+        EMPLOYEES = normalizeEmployees(store.get(KEY_EMP)||[]);
+        AUDITORS = normalizeAuditors(store.get(KEY_AUDITORS)||[]);
       }
       toast('Firebase tidak terjangkau — memakai penyimpanan cadangan','err');
     }
   } else if(IS_CLOUD){
     document.getElementById('storageWarn').style.display='none';
-    const [rec,gen,aud] = await Promise.all([
+    const [rec,gen,aud,emp,auditors] = await Promise.all([
       cloudLoad('grooming-records', true),
       cloudLoad('grooming-gender', true),
-      cloudLoad('grooming-auditor', false)
+      cloudLoad('grooming-auditor', false),
+      cloudLoad('grooming-employees', true),
+      cloudLoad('grooming-auditors', true)
     ]);
     CACHE.records = rec||{}; CACHE.gender = gen||{}; CACHE.auditor = aud||null;
+    EMPLOYEES = normalizeEmployees(emp||store.get(KEY_EMP)||[]);
+    AUDITORS = normalizeAuditors(auditors||store.get(KEY_AUDITORS)||[]);
     cloudDot(false);
   } else {
     CACHE.records = store.get(KEY_REC)||{};
     CACHE.gender  = store.get(KEY_GEN)||{};
     CACHE.auditor = store.get(KEY_AUD)||null;
+    EMPLOYEES = normalizeEmployees(store.get(KEY_EMP)||[]);
+    AUDITORS = normalizeAuditors(store.get(KEY_AUDITORS)||[]);
     cloudDot(false);
   }
   const today=new Date();
