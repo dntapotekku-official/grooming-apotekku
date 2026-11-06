@@ -39,6 +39,7 @@ main{max-width:1180px;margin:0 auto;padding:22px 18px 60px}
 .card .hint{font-size:12px;color:var(--muted);margin-bottom:12px}
 label{font-size:12px;font-weight:700;color:var(--muted);display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px}
 select,input[type=date],input[type=text],input[type=month],textarea{width:100%;padding:9px 12px;border:1.5px solid var(--line);border-radius:10px;font-size:13.5px;background:#fff;color:var(--ink);font-family:inherit}
+select{-webkit-appearance:none;appearance:none;padding-right:44px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='m1 1 5 5 5-5' fill='none' stroke='%23C8102E' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 16px center;background-size:12px 8px}
 select:focus,input:focus,textarea:focus{outline:none;border-color:var(--red)}
 .grid{display:grid;gap:12px}
 .g3{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
@@ -120,6 +121,7 @@ button, select, input, .pill, .chk-item, [onclick]{touch-action:manipulation;-we
 button{-webkit-appearance:none;appearance:none}
 @media(max-width:640px){
   select,input[type=date],input[type=text],input[type=month],textarea{font-size:16px;padding:12px 14px} /* cegah auto-zoom iOS */
+  select{padding-right:44px}
   nav button{padding:12px 16px;font-size:14px}
   .btn{padding:14px 20px;font-size:15px;width:100%}
   .btn.small{width:auto}
@@ -141,7 +143,7 @@ noscript .nojs-warn{display:block!important}
 .dd-btn{width:100%;display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 12px;border:1.5px solid var(--line);border-radius:10px;background:#fff;font-size:13.5px;font-family:inherit;cursor:pointer;text-align:left;color:var(--ink);min-height:44px}
 .dd-btn:focus{outline:none;border-color:var(--red)}
 .dd-btn .dd-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;padding-right:24px}
-.dd-caret{color:var(--red);font-size:11px;flex-shrink:0;margin-left:8px}
+.dd-caret{color:var(--red);font-size:11px;flex-shrink:0;margin-left:8px;margin-right:4px}
 .dd-panel{display:none;position:absolute;top:100%;left:0;right:0;z-index:70;background:#fff;border:1.5px solid var(--red);border-radius:12px;margin-top:4px;box-shadow:0 12px 32px rgba(140,10,30,.22);overflow:hidden}
 .dd-panel.open{display:block}
 .dd-panel > input{border:none!important;border-bottom:1.5px solid var(--line)!important;border-radius:0!important}
@@ -218,7 +220,7 @@ noscript .nojs-warn{display:block!important}
   <button class="active" data-page="checklist" onclick="go('checklist')">✅ Checklist Harian</button>
   <button data-page="dashboard" onclick="go('dashboard')">📊 Dashboard</button>
   <button data-page="rekap" onclick="go('rekap')">📅 Rekap Bulanan</button>
-  <button data-page="karyawan" onclick="go('karyawan')">👥 Data Karyawan</button>
+  <button data-page="karyawan" onclick="go('karyawan')">⚙️ Pengaturan Data</button>
 </nav>
 
 <main>
@@ -320,16 +322,48 @@ noscript .nojs-warn{display:block!important}
 <!-- ================= KARYAWAN ================= -->
 <div class="page" id="page-karyawan">
   <div class="card">
+    <h2>Pengaturan Data</h2>
+    <div class="hint">Kelola data karyawan SSC dan item pemeriksaan grooming.</div>
+    <div class="choice-row" role="group" aria-label="Bagian pengaturan data">
+      <button class="btn small" id="settingsEmployees" onclick="showSettings('employees')" aria-pressed="true">👥 Data Karyawan SSC</button>
+      <button class="btn small ghost" id="settingsItems" onclick="showSettings('items')" aria-pressed="false">☑️ Item Pemeriksaan</button>
+    </div>
+  </div>
+  <div id="settings-employees" class="card">
     <h2>Data Karyawan SSC</h2>
-    <div class="hint">Sumber data: Firestore. Tambah, edit, dan hapus karyawan langsung tersimpan ke database. Jenis kelamin hanya bisa diubah via form Edit.</div>
+    <div class="hint">Kelola karyawan yang mengikuti pemeriksaan grooming. Ubah jenis kelamin melalui form Edit.</div>
     <div class="flex-between" style="margin-bottom:12px">
       <input type="text" id="empSearch" placeholder="🔍 Cari nama / divisi / jabatan..." style="max-width:300px" oninput="renderEmpTable()">
       <button class="btn small" onclick="addEmployee()">+ Tambah Karyawan</button>
     </div>
     <div class="tbl-wrap"><table id="empTbl"></table></div>
   </div>
+  <div id="settings-items" class="card" hidden>
+    <div class="flex-between" style="margin-bottom:12px">
+      <div><h2>Item Pemeriksaan</h2><div class="hint" style="margin:0">Kelola daftar centang untuk pemeriksaan baru. Item nonaktif dan perubahan nama tidak mengubah riwayat tersimpan.</div></div>
+      <button class="btn small" onclick="openItemModal()">+ Tambah Item</button>
+    </div>
+    <div class="tbl-wrap"><table id="itemTbl"></table></div>
+  </div>
 </div>
 </main>
+
+<div class="modal-backdrop" id="itemModal">
+  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="itemModalTitle">
+    <form onsubmit="saveItemForm(event)">
+      <div class="modal-head"><h3 id="itemModalTitle">Tambah Item Pemeriksaan</h3><button type="button" class="btn small ghost" onclick="closeItemModal()" aria-label="Tutup">X</button></div>
+      <div class="modal-body grid">
+        <input type="hidden" id="itemId">
+        <div><label for="itemTitle">Nama Item</label><input type="text" id="itemTitle" maxlength="120" required></div>
+        <div><label for="itemDescription">Keterangan</label><textarea id="itemDescription" rows="3" maxlength="600" placeholder="Kriteria yang harus diperiksa"></textarea></div>
+        <div><label for="itemRule">Ketentuan</label><select id="itemRule"><option value="">Mengikuti aturan bawaan</option><option>HARUS</option><option>TIDAK BOLEH</option><option>BOLEH MAKS 2</option></select></div>
+        <div class="hint" id="itemFormHint" style="margin:0"></div>
+        <div class="modal-error" id="itemError" role="alert"></div>
+      </div>
+      <div class="modal-actions"><button type="button" class="btn ghost" onclick="closeItemModal()">Batal</button><button type="submit" class="btn" id="itemSubmit">Simpan</button></div>
+    </form>
+  </div>
+</div>
 
 <!-- ================= MODAL KARYAWAN ================= -->
 <div class="modal-backdrop" id="employeeModal">
@@ -593,7 +627,7 @@ const SERAGAM = {
 };
 
 /* 8 titik grooming (poster) + 4 titik SOP */
-function groomingItems(gender, dow){
+function defaultGroomingItems(gender, dow){
   const P = gender==='P';
   const items = [
     {id:'rambut', t:'Rambut / Kepala', d: P?'Bersih & rapi. '+(SERAGAM[dow].extra.includes('Rambut')?SERAGAM[dow].extra.replace('Wajib nametag gantungan SMILE • ',''):'Dikepang + pita'):'Bersih & rapi, potongan rapi, telinga terlihat jelas', rule:'HARUS'},
@@ -610,6 +644,102 @@ function groomingItems(gender, dow){
   ];
   if(dow===3) items.push({id:'nametag', t:'Nametag Rabu', d:'Wajib nametag gantungan smile', rule:'HARUS'});
   return items;
+}
+
+/* Master item disimpan terpisah dari dokumen hasil pemeriksaan. */
+let ITEM_SETTINGS = [];
+function normalizeItemSettings(list){
+  return (Array.isArray(list)?list:[]).filter(x=>x && /^[a-z][a-z0-9_-]*$/.test(x.id)).map(x=>({
+    id:x.id, t:String(x.t||'').trim(), d:String(x.d||'').trim(),
+    rule:['HARUS','TIDAK BOLEH','BOLEH MAKS 2'].includes(x.rule)?x.rule:'', aktif:x.aktif!==false
+  }));
+}
+function groomingItems(gender,dow){
+  const base=defaultGroomingItems(gender,dow);
+  const custom=ITEM_SETTINGS.filter(x=>x.id.startsWith('custom_'));
+  return [...base,...custom].map(it=>{
+    const setting=ITEM_SETTINGS.find(x=>x.id===it.id);
+    return setting?{...it,t:setting.t||it.t,d:setting.d||it.d,rule:setting.rule||it.rule,aktif:setting.aktif}:it;
+  }).filter(it=>it.aktif!==false);
+}
+function recordItems(record,gender,dow){
+  if(!record) return groomingItems(gender,dow);
+  // Riwayat lama menggunakan ID yang benar-benar tersimpan, bukan master saat ini.
+  const base=defaultGroomingItems(gender,dow);
+  const snapshots=Array.isArray(record.itemDefinitions)?record.itemDefinitions:[];
+  return Object.keys(record.items||{}).map(id=>snapshots.find(x=>x.id===id)||base.find(x=>x.id===id)||{id,t:ITEM_LABELS[id]||id,d:'',rule:'HARUS'});
+}
+function allMasterItems(){
+  return [...defaultGroomingItems('P',3),...ITEM_SETTINGS.filter(x=>x.id.startsWith('custom_'))].map(it=>{
+    const x=ITEM_SETTINGS.find(x=>x.id===it.id);
+    return {...it,t:x?.t||it.t,d:x?.d||it.d,rule:x?.rule||it.rule,aktif:x?.aktif!==false};
+  });
+}
+function showSettings(section){
+  document.getElementById('settings-employees').hidden=section!=='employees';
+  document.getElementById('settings-items').hidden=section!=='items';
+  for(const [id,key] of [['settingsEmployees','employees'],['settingsItems','items']]){
+    const btn=document.getElementById(id), active=section===key;
+    btn.className='btn small'+(active?'':' ghost'); btn.setAttribute('aria-pressed',String(active));
+  }
+  if(section==='items') renderItemTable();
+}
+function renderItemTable(){
+  document.getElementById('itemTbl').innerHTML='<thead><tr><th>Item Pemeriksaan</th><th>Keterangan</th><th>Status</th><th>Tindakan</th></tr></thead><tbody>'+allMasterItems().map(it=>`<tr>
+    <td><b>${esc(it.t)}</b><br><small>${it.id.startsWith('custom_')?'Semua hari & jenis kelamin':it.id==='nametag'?'Khusus Rabu':'Aturan bawaan mengikuti hari / jenis kelamin'}</small></td>
+    <td>${esc(ITEM_SETTINGS.find(x=>x.id===it.id)?.d|| (it.id.startsWith('custom_')?it.d:'Mengikuti aturan grooming bawaan'))}</td>
+    <td><span class="pill ${it.aktif?'ok':'neutral'}">${it.aktif?'Aktif':'Nonaktif'}</span></td>
+    <td><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn small ghost" onclick="openItemModal('${it.id}')">Edit</button><button class="btn small ghost" onclick="toggleItem('${it.id}')">${it.aktif?'Nonaktifkan':'Aktifkan'}</button></div></td>
+  </tr>`).join('')+'</tbody>';
+}
+function openItemModal(id=''){
+  const it=allMasterItems().find(x=>x.id===id);
+  const setting=ITEM_SETTINGS.find(x=>x.id===id);
+  document.getElementById('itemId').value=id;
+  document.getElementById('itemTitle').value=it?.t||'';
+  document.getElementById('itemDescription').value=setting?.d||'';
+  document.getElementById('itemRule').value=setting?.rule||(id?'':'HARUS');
+  document.getElementById('itemModalTitle').textContent=id?'Edit Item Pemeriksaan':'Tambah Item Pemeriksaan';
+  document.getElementById('itemFormHint').textContent=id&&!id.startsWith('custom_')?'Kosongkan keterangan dan pilih aturan bawaan untuk mempertahankan ketentuan sesuai hari dan jenis kelamin. Keterangan yang diisi berlaku bagi semua jenis kelamin.':'Item tambahan berlaku untuk semua hari dan jenis kelamin pada pemeriksaan baru.';
+  document.getElementById('itemError').className='modal-error';
+  document.getElementById('itemModal').classList.add('show');
+  document.getElementById('itemTitle').focus();
+}
+function closeItemModal(){ document.getElementById('itemModal').classList.remove('show'); }
+async function writeItemSetting(setting){
+  if(!FB) throw new Error('Firestore belum aktif. Periksa koneksi lalu coba lagi.');
+  if(!currentAuditor()) throw new Error('Silakan login sebagai auditor.');
+  const ref=FB.collection('grooming').doc('meta-items');
+  await FB.runTransaction(async transaction=>{
+    const doc=await transaction.get(ref);
+    const list=normalizeItemSettings((doc.data()||{}).list);
+    const index=list.findIndex(x=>x.id===setting.id);
+    if(index<0) list.push(setting); else list[index]={...list[index],...setting};
+    transaction.set(ref,{list,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+  });
+  const doc=await ref.get();
+  ITEM_SETTINGS=normalizeItemSettings((doc.data()||{}).list);
+  renderItemTable();
+}
+async function saveItemForm(ev){
+  ev.preventDefault();
+  const id=document.getElementById('itemId').value||'custom_'+crypto.randomUUID().replace(/-/g,'');
+  const t=document.getElementById('itemTitle').value.trim();
+  if(!t) return;
+  const btn=document.getElementById('itemSubmit'); btn.disabled=true;
+  try{
+    const existing=ITEM_SETTINGS.find(x=>x.id===id);
+    await writeItemSetting({id,t,d:document.getElementById('itemDescription').value.trim(),rule:document.getElementById('itemRule').value||(id.startsWith('custom_')?'HARUS':''),aktif:existing?.aktif!==false});
+    closeItemModal(); toast('Item pemeriksaan tersimpan','ok');
+  }catch(e){ const el=document.getElementById('itemError'); el.textContent=e.message||'Gagal menyimpan item. Coba lagi.'; el.className='modal-error show'; }
+  finally{ btn.disabled=false; }
+}
+async function toggleItem(id){
+  const it=allMasterItems().find(x=>x.id===id); if(!it) return;
+  const active=!it.aktif;
+  if(!await openConfirmModal(active?'Aktifkan Item':'Nonaktifkan Item', (active?'Aktifkan':'Nonaktifkan')+' '+it.t+' untuk pemeriksaan baru? Riwayat tersimpan tetap utuh.',active?'Aktifkan':'Nonaktifkan')) return;
+  try{ await writeItemSetting({id,aktif:active}); toast(active?'Item diaktifkan':'Item dinonaktifkan','ok'); }
+  catch(e){ toast(e.message||'Gagal memperbarui item','err'); }
 }
 
 /* ================= TEBAK GENDER DARI NAMA ================= */
@@ -665,7 +795,7 @@ function refreshActive(){ /* dipanggil saat ada update real-time dari perangkat 
   renderLogin(); applyAuth();
   if(id==='dashboard') renderDashboard();
   if(id==='rekap') renderRekap();
-  if(id==='karyawan') renderEmpTable();
+  if(id==='karyawan'){ renderEmpTable(); renderItemTable(); }
   /* halaman checklist sengaja tidak di-render ulang agar penilaian yang sedang berlangsung tidak hilang */
 }
 function getRecords(){ return CACHE.records; }
@@ -714,12 +844,13 @@ async function go(p){
   if(p==='checklist'){ fillDivisiSelect(); fillEmpSelect(); }
   if(p==='dashboard') renderDashboard();
   if(p==='rekap') renderRekap();
-  if(p==='karyawan') renderEmpTable();
+  if(p==='karyawan'){ renderEmpTable(); renderItemTable(); }
 }
 function toast(msg,cls){ const t=document.getElementById('toast'); t.textContent=msg; t.className='show '+(cls||''); setTimeout(()=>t.className='',2600); }
 
 
 /* ================= CHECKLIST ================= */
+let currentDefinitions = [];
 let current = {}; // {itemId: true(sesuai)/false(melanggar)}
 
 async function ddToggle(which){
@@ -810,7 +941,7 @@ function renderChecklist(){
     document.getElementById('dayBanner').innerHTML = '<div>Data karyawan belum tersedia.</div>';
     document.getElementById('chkTitle').textContent = 'Titik Grooming';
     document.getElementById('chkItems').innerHTML = '<div class="empty-note">Pilih insan SSC setelah data karyawan termuat dari Firestore.</div>';
-    current = {};
+    current = {}; currentDefinitions = [];
     updateSummary();
     return;
   }
@@ -823,7 +954,8 @@ function renderChecklist(){
   document.getElementById('chkTitle').textContent = 'Titik Grooming — '+emp.nama;
 
   const saved = (getRecords()[dateStr]||{})[emp.no];
-  const items = groomingItems(g,dow);
+  const items = recordItems(saved,g,dow);
+  currentDefinitions = items.map(it=>({...it}));
   current = {};
   items.forEach(it=>{ current[it.id] = saved ? (saved.items[it.id]!==false) : true; });
   document.getElementById('chkNote').value = saved?.note||'';
@@ -836,7 +968,7 @@ function renderChecklist(){
     const rc = it.rule==='HARUS'?'rule-harus':(it.rule==='TIDAK BOLEH'?'rule-tidak':'rule-boleh');
     return `<div class="chk-item ${v?'v-ok':'v-no'}" id="row-${it.id}">
       <div class="chk-num">${i+1}</div>
-      <div class="chk-body"><b>${it.t}</b> <span class="chk-rule ${rc}">${it.rule}</span><small>${it.d}</small></div>
+      <div class="chk-body"><b>${esc(it.t)}</b> <span class="chk-rule ${rc}">${esc(it.rule)}</span><small>${esc(it.d)}</small></div>
       <div class="seg">
         <button class="${v?'on-ok':''}" onclick="mark('${it.id}',true)">✓ Sesuai</button>
         <button class="${v?'':'on-no'}" onclick="mark('${it.id}',false)">✗ Melanggar</button>
@@ -864,9 +996,10 @@ function saveChecklist(){
   if(!currentAuditor()) { applyAuth(); return toast('Silakan login sebagai auditor dulu','err'); }
   const dateStr=document.getElementById('chkDate').value, emp=selectedEmp();
   if(!dateStr||!emp) return toast('Pilih tanggal & karyawan dulu','err');
+  if(!currentDefinitions.length) return toast('Aktifkan minimal satu item pemeriksaan terlebih dahulu','err');
   const rec=getRecords();
   rec[dateStr]=rec[dateStr]||{};
-  rec[dateStr][emp.no]={items:{...current}, note:document.getElementById('chkNote').value.trim(), savedAt:Date.now(), auditor:currentAuditor()};
+  rec[dateStr][emp.no]={items:{...current}, itemDefinitions:currentDefinitions.map(({id,t,d,rule})=>({id,t,d,rule})), note:document.getElementById('chkNote').value.trim(), savedAt:Date.now(), auditor:currentAuditor()};
   setRecords(rec, dateStr);
   const no=Object.values(current).filter(v=>!v).length;
   toast(`Tersimpan: ${emp.nama.split(',')[0]} — ${no} pelanggaran (${rupiah(no*DENDA)})`,'ok');
@@ -895,7 +1028,8 @@ function monthData(ym){ // ym = 'YYYY-MM'
     Object.entries(byEmp).forEach(([no,r])=>{
       const emp=EMPLOYEES.find(e=>e.no===+no); if(!emp) return;
       const viol=Object.entries(r.items).filter(([,v])=>v===false).map(([k])=>k);
-      out.push({date, emp, viol, note:r.note, auditor:r.auditor||''});
+      const labels=Object.fromEntries(recordItems(r,empGender(emp),new Date(date+'T12:00:00').getDay()).map(it=>[it.id,it.t]));
+      out.push({date, emp, viol, labels, note:r.note, auditor:r.auditor||''});
     });
   });
   return out;
@@ -921,12 +1055,12 @@ function renderDashboard(){
     <div class="stat green"><div class="big">${comp}%</div><div class="lbl">Pemeriksaan Tanpa Pelanggaran</div></div>`;
 
   // by item
-  const byItem={};
-  data.forEach(d=>d.viol.forEach(v=>byItem[v]=(byItem[v]||0)+1));
+  const byItem=Object.create(null);
+  data.forEach(d=>d.viol.forEach(v=>{const label=d.labels[v]||ITEM_LABELS[v]||v; byItem[label]=(byItem[label]||0)+1;}));
   const itemsSorted=Object.entries(byItem).sort((a,b)=>b[1]-a[1]);
   const maxI=itemsSorted[0]?.[1]||1;
   document.getElementById('dashByItem').innerHTML = itemsSorted.length? itemsSorted.map(([k,v])=>
-    `<div class="bar-row"><div class="bl">${ITEM_LABELS[k]||k}</div><div class="bar-track"><div class="bar-fill" style="width:${Math.max(8,v/maxI*100)}%">${v}</div></div></div>`).join('')
+    `<div class="bar-row"><div class="bl">${esc(k)}</div><div class="bar-track"><div class="bar-fill" style="width:${Math.max(8,v/maxI*100)}%">${v}</div></div></div>`).join('')
     : '<div class="empty-note"><div class="big-ico">🎉</div>Belum ada pelanggaran periode ini</div>';
 
   // by divisi
@@ -952,11 +1086,11 @@ function renderDashboard(){
 function rekapRows(ym){
   const data=monthData(ym);
   const byEmp={};
-  activeEmployees().forEach(e=>byEmp[e.no]={emp:e,checks:0,viol:0,perItem:{},notes:[]});
+  activeEmployees().forEach(e=>byEmp[e.no]={emp:e,checks:0,viol:0,perItem:Object.create(null),notes:[]});
   data.forEach(d=>{
-    byEmp[d.emp.no]=byEmp[d.emp.no]||{emp:d.emp,checks:0,viol:0,perItem:{},notes:[]};
+    byEmp[d.emp.no]=byEmp[d.emp.no]||{emp:d.emp,checks:0,viol:0,perItem:Object.create(null),notes:[]};
     const b=byEmp[d.emp.no]; b.checks++; b.viol+=d.viol.length;
-    d.viol.forEach(v=>b.perItem[v]=(b.perItem[v]||0)+1);
+    d.viol.forEach(v=>{const label=d.labels[v]||ITEM_LABELS[v]||v; b.perItem[label]=(b.perItem[label]||0)+1;});
     if(d.note) b.notes.push(d.date.slice(8)+': '+d.note);
   });
   return Object.values(byEmp);
@@ -978,7 +1112,7 @@ function renderRekap(){
   document.getElementById('rekapTbl').innerHTML=
     '<thead><tr><th>No</th><th>Nama</th><th>Divisi</th><th>Jabatan</th><th>Diperiksa</th><th>Pelanggaran</th><th>Detail Pelanggaran</th><th>Denda</th><th>Status</th></tr></thead><tbody>'+
     filtered.map(r=>{
-      const det=Object.entries(r.perItem).map(([k,v])=>`${ITEM_LABELS[k]||k} (${v}×)`).join(', ')||'—';
+      const det=Object.entries(r.perItem).map(([k,v])=>`${esc(k)} (${v}×)`).join(', ')||'—';
       const st = r.checks===0?'<span class="pill neutral">Belum diperiksa</span>': r.viol===0?'<span class="pill ok">Bersih ✓</span>':'<span class="pill no">'+r.viol+' pelanggaran</span>';
       return `<tr><td>${r.emp.no}</td><td><b>${r.emp.nama}</b></td><td>${r.emp.divisi}</td><td>${r.emp.jabatan}</td><td>${r.checks}×</td><td>${r.viol}</td><td style="max-width:260px;font-size:11.5px">${det}</td><td class="denda-txt">${r.viol?rupiah(r.viol*DENDA):'—'}</td><td>${st}</td></tr>`;
     }).join('')+'</tbody>';
@@ -998,7 +1132,7 @@ function exportExcel(){
     ['No','Nama Insan SSC','Divisi','Jabatan','Status','Jml Diperiksa','Jml Pelanggaran','Detail Pelanggaran','Total Denda (Rp)','Catatan']];
   rows.forEach(r=>{
     aoa.push([r.emp.no,r.emp.nama,r.emp.divisi,r.emp.jabatan,r.emp.status,r.checks,r.viol,
-      Object.entries(r.perItem).map(([k,v])=>`${ITEM_LABELS[k]||k} (${v}x)`).join(', '), r.viol*DENDA, r.notes.join(' | ')]);
+      Object.entries(r.perItem).map(([k,v])=>`${k} (${v}x)`).join(', '), r.viol*DENDA, r.notes.join(' | ')]);
   });
   const totV=rows.reduce((s,r)=>s+r.viol,0);
   aoa.push([],['','TOTAL','','','',rows.reduce((s,r)=>s+r.checks,0),totV,'',totV*DENDA]);
@@ -1006,7 +1140,7 @@ function exportExcel(){
   // Sheet 2: Detail harian
   const det=[['Tanggal','No','Nama','Divisi','Titik Pelanggaran','Jml Pelanggaran','Denda (Rp)','Auditor','Catatan']];
   monthData(ym).sort((a,b)=>a.date.localeCompare(b.date)||a.emp.no-b.emp.no).forEach(d=>{
-    det.push([d.date,d.emp.no,d.emp.nama,d.emp.divisi,d.viol.map(v=>ITEM_LABELS[v]||v).join(', ')||'-',d.viol.length,d.viol.length*DENDA,auditorName(d.auditor),d.note||'']);
+    det.push([d.date,d.emp.no,d.emp.nama,d.emp.divisi,d.viol.map(v=>d.labels[v]||ITEM_LABELS[v]||v).join(', ')||'-',d.viol.length,d.viol.length*DENDA,auditorName(d.auditor),d.note||'']);
   });
 
   const wb=XLSX.utils.book_new();
@@ -1215,12 +1349,13 @@ async function restoreEmployee(no){
       await new Promise((res,rej)=>{
         let first=true;
         FB.collection('grooming').onSnapshot(snap=>{
-          const rec={}; let gen={};
+          const rec={}; let gen={}; let itemSettings=[];
           snap.forEach(d=>{
             if(d.id==='meta-gender') gen=d.data()||{};
+            else if(d.id==='meta-items') itemSettings=normalizeItemSettings((d.data()||{}).list);
             else if(d.id.indexOf('rec-')===0) rec[d.id.slice(4)]=d.data()||{};
           });
-          CACHE.records=rec; CACHE.gender=gen;
+          CACHE.records=rec; CACHE.gender=gen; ITEM_SETTINGS=itemSettings;
           cloudDot(false);
           if(first){ first=false; res(); } else refreshActive();
         }, err=>{ if(first){ first=false; rej(err); } });
