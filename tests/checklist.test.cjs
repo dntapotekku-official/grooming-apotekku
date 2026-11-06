@@ -120,3 +120,51 @@ test('beralih karyawan saat penyimpanan berjalan tidak menimpa tampilan karyawan
 test('penyimpanan lokal gagal tidak menghasilkan status sukses',async()=>{
   const a=createApp();a.run("renderChecklist();localStorage.setItem=()=>{throw new Error('quota exceeded');};");await a.run('saveChecklist()');assert.deepEqual(a.json('CACHE.records'),{});assert.match(a.element('chkStatusPill').textContent,/Gagal disimpan/);
 });
+test('form Nametag mengikuti default Rabu dan item tambahan default setiap hari',()=>{
+  const a=createApp();a.run("openItemModal('nametag');");assert.deepEqual(a.json('selectedItemDays()'),[3]);
+  a.run('openItemModal();');assert.equal(a.run('selectedItemDays().length'),7);
+  a.run("openItemModal('nametag');selectAllItemDays();");assert.equal(a.run('selectedItemDays().length'),7);
+});
+test('Nametag dapat diatur untuk hari selain Rabu tanpa berubah menjadi item baru',()=>{
+  const a=createApp();a.run("ITEM_SETTINGS=normalizeItemSettings([{id:'nametag',days:[1,5]}]);");
+  for(let day=0;day<7;day++)assert.equal(a.run(`groomingItems('P',${day}).some(x=>x.id==='nametag')`),[1,5].includes(day));
+  assert.deepEqual(a.json("allMasterItems().find(x=>x.id==='nametag').days"),[1,5]);
+  a.run('renderItemTable();');assert.match(a.element('itemTbl').innerHTML,/Senin, Jumat/);
+});
+test('item tambahan mengikuti hari terpilih untuk laki-laki dan perempuan',()=>{
+  const a=createApp();a.run("ITEM_SETTINGS=normalizeItemSettings([{id:'custom_a',t:'Audit khusus',d:'Kriteria',rule:'HARUS',days:[2,4,6]}]);");
+  for(const gender of ['P','L'])for(let day=0;day<7;day++)assert.equal(a.run(`groomingItems('${gender}',${day}).some(x=>x.id==='custom_a')`),[2,4,6].includes(day));
+});
+test('ketentuan per hari mengungguli aturan umum dan yang kosong mengikuti bawaan',()=>{
+  const a=createApp();a.run("ITEM_SETTINGS=normalizeItemSettings([{id:'seragam',dailyRules:{1:{d:'Baju khusus Senin',rule:'TIDAK BOLEH'},5:{d:'Baju Jumat'}}}]);");
+  assert.equal(a.run("groomingItems('P',1).find(x=>x.id==='seragam').d"),'Baju khusus Senin');
+  assert.equal(a.run("groomingItems('P',1).find(x=>x.id==='seragam').rule"),'TIDAK BOLEH');
+  assert.equal(a.run("groomingItems('P',5).find(x=>x.id==='seragam').rule"),'HARUS');
+  assert.match(a.run("groomingItems('P',2).find(x=>x.id==='seragam').d"),/ENDEK/);
+  assert.equal(a.run("groomingItems('L',1).find(x=>x.id==='seragam').d"),'Baju khusus Senin');
+});
+test('form menolak jadwal kosong sebelum melakukan transaksi',async()=>{
+  const a=createApp(),{control}=attachFirestore(a);a.run("openItemModal();");a.element('itemTitle').value='Item uji';a.run('ITEM_DAY_ORDER.forEach(day=>document.getElementById("itemDay-"+day).checked=false);');
+  await a.run('saveItemForm({preventDefault(){}})');assert.equal(control.calls,0);assert.match(a.element('itemError').textContent,/minimal satu hari/);
+});
+test('form menyimpan dan memuat kembali jadwal beserta aturan khusus per hari',async()=>{
+  const a=createApp(),{docs}=attachFirestore(a);a.run('openItemModal();');a.element('itemTitle').value='Jadwal uji';
+  a.run('ITEM_DAY_ORDER.forEach(day=>document.getElementById("itemDay-"+day).checked=[1,3].includes(day));');
+  a.element('itemDailyDescription-1').value='Kriteria Senin';a.element('itemDailyRule-1').value='TIDAK BOLEH';
+  a.element('itemDailyDescription-5').value='Isian tersimpan untuk Jumat';
+  await a.run('saveItemForm({preventDefault(){}})');const item=docs.get('meta-items').list[0];assert.deepEqual(item.days,[1,3]);assert.equal(item.dailyRules['1'].d,'Kriteria Senin');
+  a.context.itemId=item.id;a.run('openItemModal(itemId);');assert.deepEqual(a.json('selectedItemDays()'),[1,3]);assert.equal(a.element('itemDailyRule-1').value,'TIDAK BOLEH');
+  assert.equal(a.element('itemDailyRow-5').hidden,true);assert.equal(a.element('itemDailyDescription-5').value,'Isian tersimpan untuk Jumat');
+});
+test('perubahan jadwal tidak mengubah item, aturan, atau banner pemeriksaan tersimpan',async()=>{
+  const a=createApp();a.run("ITEM_SETTINGS=normalizeItemSettings([{id:'nametag',days:[3],dailyRules:{3:{d:'Nametag versi lama'}}},{id:'seragam',dailyRules:{3:{d:'Seragam versi lama'}}}]);renderChecklist();mark('nametag',false);");
+  await a.run('saveChecklist()');a.run("ITEM_SETTINGS=normalizeItemSettings([{id:'nametag',days:[5],dailyRules:{5:{d:'Nametag versi baru'}}},{id:'seragam',dailyRules:{3:{d:'Seragam versi baru'}}}]);renderChecklist();");
+  assert.equal(a.run('current.nametag'),false);assert.match(a.element('dayBanner').innerHTML,/Nametag versi lama/);assert.match(a.element('dayBanner').innerHTML,/Seragam versi lama/);assert.doesNotMatch(a.element('dayBanner').innerHTML,/versi baru/);
+});
+test('banner mencerminkan jadwal Nametag dan keterangan Seragam yang dikustom',()=>{
+  const a=createApp();a.element('chkDate').value='2026-11-06';a.run("ITEM_SETTINGS=normalizeItemSettings([{id:'nametag',days:[5],dailyRules:{5:{d:'Nametag Jumat'}}},{id:'seragam',dailyRules:{5:{d:'Baju Jumat kustom'}}}]);renderChecklist();");
+  assert.match(a.element('dayBanner').innerHTML,/Nametag Jumat/);assert.match(a.element('dayBanner').innerHTML,/Baju Jumat kustom/);assert.doesNotMatch(a.element('dayBanner').innerHTML,/SMART CASUAL/);
+});
+test('master jadwal terbaru menolak simpan draft yang dibuat sebelum perubahan hari',async()=>{
+  const a=createApp();a.run('renderChecklist();');const {docs}=attachFirestore(a,{'meta-items':{list:[{id:'nametag',days:[5],revision:1}]}});await a.run('saveChecklist()');assert.equal(docs.has('rec-2026-11-04'),false);assert.match(a.json('messages')[0].message,/Item pemeriksaan sudah berubah/);
+});
