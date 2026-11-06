@@ -271,8 +271,8 @@ noscript .nojs-warn{display:block!important}
       <div class="sum-box denda"><div class="val" id="sumDenda">Rp 0</div><div class="lbl">Total Denda</div></div>
     </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap">
-      <button class="btn" onclick="saveChecklist()">💾 Simpan Checklist</button>
-      <button class="btn ghost" onclick="resetChecklist()">↺ Reset</button>
+      <button class="btn" id="btnSaveChecklist" onclick="saveChecklist()">💾 Simpan Checklist</button>
+      <button class="btn ghost" id="btnResetChecklist" onclick="resetChecklist()">↺ Reset</button>
       <button class="btn ghost" onclick="deleteChecklist()" id="btnDelete" style="display:none">🗑 Hapus Data Hari Ini</button>
     </div>
   </div>
@@ -353,7 +353,7 @@ noscript .nojs-warn{display:block!important}
     <form onsubmit="saveItemForm(event)">
       <div class="modal-head"><h3 id="itemModalTitle">Tambah Item Pemeriksaan</h3><button type="button" class="btn small ghost" onclick="closeItemModal()" aria-label="Tutup">X</button></div>
       <div class="modal-body grid">
-        <input type="hidden" id="itemId">
+        <input type="hidden" id="itemId"><input type="hidden" id="itemRevision">
         <div><label for="itemTitle">Nama Item</label><input type="text" id="itemTitle" maxlength="120" required></div>
         <div><label for="itemDescription">Keterangan</label><textarea id="itemDescription" rows="3" maxlength="600" placeholder="Kriteria yang harus diperiksa"></textarea></div>
         <div><label for="itemRule">Ketentuan</label><select id="itemRule"><option value="">Mengikuti aturan bawaan</option><option>HARUS</option><option>TIDAK BOLEH</option><option>BOLEH MAKS 2</option></select></div>
@@ -651,14 +651,15 @@ let ITEM_SETTINGS = [];
 function normalizeItemSettings(list){
   return (Array.isArray(list)?list:[]).filter(x=>x && /^[a-z][a-z0-9_-]*$/.test(x.id)).map(x=>({
     id:x.id, t:String(x.t||'').trim(), d:String(x.d||'').trim(),
-    rule:['HARUS','TIDAK BOLEH','BOLEH MAKS 2'].includes(x.rule)?x.rule:'', aktif:x.aktif!==false
+    rule:['HARUS','TIDAK BOLEH','BOLEH MAKS 2'].includes(x.rule)?x.rule:'', aktif:x.aktif!==false,
+    revision:Number.isSafeInteger(x.revision)&&x.revision>=0?x.revision:0
   }));
 }
-function groomingItems(gender,dow){
+function groomingItems(gender,dow,settings=ITEM_SETTINGS){
   const base=defaultGroomingItems(gender,dow);
-  const custom=ITEM_SETTINGS.filter(x=>x.id.startsWith('custom_'));
+  const custom=settings.filter(x=>x.id.startsWith('custom_'));
   return [...base,...custom].map(it=>{
-    const setting=ITEM_SETTINGS.find(x=>x.id===it.id);
+    const setting=settings.find(x=>x.id===it.id);
     return setting?{...it,t:setting.t||it.t,d:setting.d||it.d,rule:setting.rule||it.rule,aktif:setting.aktif}:it;
   }).filter(it=>it.aktif!==false);
 }
@@ -696,6 +697,7 @@ function openItemModal(id=''){
   const it=allMasterItems().find(x=>x.id===id);
   const setting=ITEM_SETTINGS.find(x=>x.id===id);
   document.getElementById('itemId').value=id;
+  document.getElementById('itemRevision').value=setting?.revision||0;
   document.getElementById('itemTitle').value=it?.t||'';
   document.getElementById('itemDescription').value=setting?.d||'';
   document.getElementById('itemRule').value=setting?.rule||(id?'':'HARUS');
@@ -706,21 +708,29 @@ function openItemModal(id=''){
   document.getElementById('itemTitle').focus();
 }
 function closeItemModal(){ document.getElementById('itemModal').classList.remove('show'); }
-async function writeItemSetting(setting){
+async function writeItemSetting(setting,expectedRevision=0){
   if(!FB) throw new Error('Firestore belum aktif. Periksa koneksi lalu coba lagi.');
   if(!currentAuditor()) throw new Error('Silakan login sebagai auditor.');
   const ref=FB.collection('grooming').doc('meta-items');
-  await FB.runTransaction(async transaction=>{
+  const committed=await FB.runTransaction(async transaction=>{
     const doc=await transaction.get(ref);
     const list=normalizeItemSettings((doc.data()||{}).list);
     const index=list.findIndex(x=>x.id===setting.id);
-    if(index<0) list.push(setting); else list[index]={...list[index],...setting};
+    const existing=list[index];
+    if(existing?.aktif===false && setting.aktif!==false) throw new Error('Item sudah dihapus di perangkat lain. Tutup form dan muat ulang daftar item.');
+    if((existing?.revision||0)!==expectedRevision) throw new Error('Item sudah berubah di perangkat lain. Tutup form dan buka Edit kembali.');
+    const updated={...existing,...setting,revision:(existing?.revision||0)+1};
+    if(index<0) list.push(updated); else list[index]=updated;
     transaction.set(ref,{list,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+    return normalizeItemSettings(list);
   });
-  const doc=await ref.get();
-  ITEM_SETTINGS=normalizeItemSettings((doc.data()||{}).list);
+  // Jangan menimpa pembaruan realtime yang versinya lebih baru.
+  const merged=new Map(ITEM_SETTINGS.map(x=>[x.id,x]));
+  committed.forEach(x=>{ if(!merged.has(x.id)||(merged.get(x.id).revision||0)<=x.revision) merged.set(x.id,x); });
+  ITEM_SETTINGS=[...merged.values()];
   renderItemTable();
 }
+
 async function saveItemForm(ev){
   ev.preventDefault();
   const id=document.getElementById('itemId').value||'custom_'+crypto.randomUUID().replace(/-/g,'');
@@ -728,17 +738,17 @@ async function saveItemForm(ev){
   if(!t) return;
   const btn=document.getElementById('itemSubmit'); btn.disabled=true;
   try{
-    const existing=ITEM_SETTINGS.find(x=>x.id===id);
-    await writeItemSetting({id,t,d:document.getElementById('itemDescription').value.trim(),rule:document.getElementById('itemRule').value||(id.startsWith('custom_')?'HARUS':''),aktif:existing?.aktif!==false});
+    await writeItemSetting({id,t,d:document.getElementById('itemDescription').value.trim(),rule:document.getElementById('itemRule').value||(id.startsWith('custom_')?'HARUS':''),aktif:true},Number(document.getElementById('itemRevision').value));
     closeItemModal(); toast('Item pemeriksaan tersimpan','ok');
   }catch(e){ const el=document.getElementById('itemError'); el.textContent=e.message||'Gagal menyimpan item. Coba lagi.'; el.className='modal-error show'; }
   finally{ btn.disabled=false; }
 }
 async function deleteItem(id){
   const it=allMasterItems().find(x=>x.id===id); if(!it) return;
+  const revision=ITEM_SETTINGS.find(x=>x.id===id)?.revision||0;
   if(!await openConfirmModal('Hapus Item Pemeriksaan', 'Hapus '+it.t+' dari daftar item dan pemeriksaan baru? Riwayat pemeriksaan yang sudah tersimpan tetap utuh.', 'Hapus')) return;
   // Simpan penanda penghapusan agar item bawaan tidak muncul lagi dan riwayat tetap utuh.
-  try{ await writeItemSetting({id,aktif:false}); toast('Item pemeriksaan dihapus','ok'); }
+  try{ await writeItemSetting({id,aktif:false},revision); toast('Item pemeriksaan dihapus','ok'); }
   catch(e){ toast(e.message||'Gagal menghapus item','err'); }
 }
 
@@ -765,11 +775,11 @@ const KEY_REC = 'apotekku_grooming_records';
 const KEY_GEN = 'apotekku_grooming_gender';
 /* state runtime untuk data checklist dan login perangkat */
 let CACHE = { records:{}, gender:{}, auditor:null };
-let cloudBusy = 0;
+let cloudBusy = 0, cloudWriteFailed = false;
 function cloudDot(on){
   const el=document.getElementById('cloudDot'); if(!el) return;
   const mode = FB? '🔥 Firebase' : (IS_CLOUD? '☁️ Cloud' : '💾 Lokal');
-  el.textContent = on? mode+' • menyimpan...' : (FB||IS_CLOUD? mode+' • tersinkron' : mode+' • perangkat ini');
+  el.textContent = on? mode+' • menyimpan...' : (cloudWriteFailed?mode+' • gagal menyimpan':FB||IS_CLOUD? mode+' • tersinkron' : mode+' • perangkat ini');
 }
 async function cloudSave(key,val,shared){
   cloudBusy++; cloudDot(true);
@@ -781,13 +791,46 @@ async function cloudLoad(key,shared){
   try{ const r=await window.storage.get(key,shared); return r?JSON.parse(r.value):null; }
   catch(e){ return null; }
 }
-function fbSaveDate(date){
-  const byEmp = CACHE.records[date];
+function recordFingerprint(record){
+  const stable=value=>Array.isArray(value)?value.map(stable):value&&typeof value==='object'?Object.fromEntries(Object.keys(value).sort().map(key=>[key,stable(value[key])])):value;
+  return JSON.stringify(stable(record||null));
+}
+function itemDefinitions(items){ return items.map(({id,t,d,rule})=>({id,t,d,rule})); }
+async function persistChecklistRecord(date,no,record,expected,gender){
+  cloudWriteFailed=false;
   cloudBusy++; cloudDot(true);
-  const ref = FB.collection('grooming').doc('rec-'+date);
-  const p = (byEmp && Object.keys(byEmp).length)? ref.set(byEmp) : ref.delete();
-  p.catch(e=>toast('Gagal menyimpan ke Firebase — periksa koneksi','err'))
-   .finally(()=>{ cloudBusy--; if(cloudBusy<=0) cloudDot(false); });
+  try{
+    if(FB){
+      const ref=FB.collection('grooming').doc('rec-'+date);
+      await FB.runTransaction(async transaction=>{
+        const doc=await transaction.get(ref);
+        const byEmp=doc.data()||{};
+        if(recordFingerprint(byEmp[no])!==recordFingerprint(expected)) throw new Error('Pemeriksaan ini sudah berubah di perangkat lain. Pilih ulang karyawan untuk memuat data terbaru.');
+        if(record && !expected){
+          const master=await transaction.get(FB.collection('grooming').doc('meta-items'));
+          const latest=groomingItems(gender,new Date(date+'T12:00:00').getDay(),normalizeItemSettings((master.data()||{}).list));
+          if(recordFingerprint(itemDefinitions(latest))!==recordFingerprint(record.itemDefinitions)) throw new Error('Item pemeriksaan sudah berubah. Pilih ulang karyawan untuk memuat item terbaru sebelum menyimpan.');
+        }
+        if(record) byEmp[no]=record; else delete byEmp[no];
+        if(Object.keys(byEmp).length) transaction.set(ref,byEmp); else transaction.delete(ref);
+      });
+    } else {
+      const records=JSON.parse(JSON.stringify(CACHE.records));
+      records[date]=records[date]||{};
+      if(record) records[date][no]=record; else delete records[date][no];
+      if(!Object.keys(records[date]).length) delete records[date];
+      if(IS_CLOUD) await window.storage.set('grooming-records',JSON.stringify(records),true);
+      else {
+        if(!storageOK) throw new Error('Penyimpanan tidak tersedia. Buka aplikasi di browser dan coba lagi.');
+        localStorage.setItem(KEY_REC,JSON.stringify(records));
+      }
+    }
+    // Cache diperbarui hanya sesudah server / penyimpanan mengonfirmasi keberhasilan.
+    CACHE.records[date]=CACHE.records[date]||{};
+    if(record) CACHE.records[date][no]=record; else delete CACHE.records[date][no];
+    if(!Object.keys(CACHE.records[date]).length) delete CACHE.records[date];
+  }catch(e){ cloudWriteFailed=true; throw e; }
+  finally{ cloudBusy--; if(cloudBusy<=0) cloudDot(false); }
 }
 function refreshActive(){ /* dipanggil saat ada update real-time dari perangkat lain */
   const p=document.querySelector('.page.show'); if(!p) return;
@@ -799,12 +842,6 @@ function refreshActive(){ /* dipanggil saat ada update real-time dari perangkat 
   /* halaman checklist sengaja tidak di-render ulang agar penilaian yang sedang berlangsung tidak hilang */
 }
 function getRecords(){ return CACHE.records; }
-function setRecords(r, changedDate){
-  CACHE.records=r;
-  if(FB){ if(changedDate) fbSaveDate(changedDate); return; }
-  if(IS_CLOUD) cloudSave('grooming-records', r, true);
-  else store.set(KEY_REC, r);
-}
 function getGenderMap(){ return CACHE.gender; }
 function setGenderMap(g){
   CACHE.gender=g;
@@ -851,6 +888,8 @@ function toast(msg,cls){ const t=document.getElementById('toast'); t.textContent
 
 /* ================= CHECKLIST ================= */
 let currentDefinitions = [];
+let currentSavedRecord = null;
+let checklistBusy = false;
 let current = {}; // {itemId: true(sesuai)/false(melanggar)}
 
 async function ddToggle(which){
@@ -941,7 +980,10 @@ function renderChecklist(){
     document.getElementById('dayBanner').innerHTML = '<div>Data karyawan belum tersedia.</div>';
     document.getElementById('chkTitle').textContent = 'Titik Grooming';
     document.getElementById('chkItems').innerHTML = '<div class="empty-note">Pilih insan SSC setelah data karyawan termuat dari Firestore.</div>';
-    current = {}; currentDefinitions = [];
+    current = {}; currentDefinitions = []; currentSavedRecord=null;
+    document.getElementById('chkNote').value='';
+    document.getElementById('chkStatusPill').textContent='Pilih karyawan';
+    document.getElementById('btnDelete').style.display='none';
     updateSummary();
     return;
   }
@@ -954,6 +996,7 @@ function renderChecklist(){
   document.getElementById('chkTitle').textContent = 'Titik Grooming — '+emp.nama;
 
   const saved = (getRecords()[dateStr]||{})[emp.no];
+  currentSavedRecord=saved?JSON.parse(JSON.stringify(saved)):null;
   const items = recordItems(saved,g,dow);
   currentDefinitions = items.map(it=>({...it}));
   current = {};
@@ -974,10 +1017,11 @@ function renderChecklist(){
         <button class="${v?'':'on-no'}" onclick="mark('${it.id}',false)">✗ Melanggar</button>
       </div>
     </div>`;
-  }).join('');
+  }).join('')||'<div class="empty-note">Belum ada item pemeriksaan. Tambahkan item melalui Pengaturan Data → Item Pemeriksaan.</div>';
   updateSummary();
 }
 function mark(id,val){
+  if(checklistBusy||!Object.hasOwn(current,id)) return;
   current[id]=val;
   const row=document.getElementById('row-'+id);
   row.className='chk-item '+(val?'v-ok':'v-no');
@@ -985,39 +1029,69 @@ function mark(id,val){
   btns[0].className=val?'on-ok':''; btns[1].className=val?'':'on-no';
   updateSummary();
 }
+function updateChecklistControls(){
+  const empty=!currentDefinitions.length||!selectedEmp()||!document.getElementById('chkDate').value;
+  document.getElementById('btnSaveChecklist').disabled=checklistBusy||empty;
+  document.getElementById('btnSaveChecklist').textContent=checklistBusy?'⏳ Memproses...':'💾 Simpan Checklist';
+  document.getElementById('btnResetChecklist').disabled=checklistBusy||empty;
+  document.getElementById('btnDelete').disabled=checklistBusy;
+  document.getElementById('chkNote').disabled=checklistBusy||empty;
+  document.getElementById('chkItems').querySelectorAll('button').forEach(btn=>btn.disabled=checklistBusy);
+}
 function updateSummary(){
   const vals=Object.values(current);
   const no=vals.filter(v=>!v).length;
   document.getElementById('sumOk').textContent=vals.length-no;
   document.getElementById('sumNo').textContent=no;
   document.getElementById('sumDenda').textContent=rupiah(no*DENDA);
+  updateChecklistControls();
 }
-function saveChecklist(){
+async function saveChecklist(){
+  if(checklistBusy) return;
   if(!currentAuditor()) { applyAuth(); return toast('Silakan login sebagai auditor dulu','err'); }
   const dateStr=document.getElementById('chkDate').value, emp=selectedEmp();
   if(!dateStr||!emp) return toast('Pilih tanggal & karyawan dulu','err');
   if(!currentDefinitions.length) return toast('Tambahkan minimal satu item pemeriksaan terlebih dahulu','err');
-  const rec=getRecords();
-  rec[dateStr]=rec[dateStr]||{};
-  rec[dateStr][emp.no]={items:{...current}, itemDefinitions:currentDefinitions.map(({id,t,d,rule})=>({id,t,d,rule})), note:document.getElementById('chkNote').value.trim(), savedAt:Date.now(), auditor:currentAuditor()};
-  setRecords(rec, dateStr);
-  const no=Object.values(current).filter(v=>!v).length;
-  toast(`Tersimpan: ${emp.nama.split(',')[0]} — ${no} pelanggaran (${rupiah(no*DENDA)})`,'ok');
-  renderChecklist();
+  const record={items:{...current},itemDefinitions:itemDefinitions(currentDefinitions),note:document.getElementById('chkNote').value.trim(),savedAt:Date.now(),auditor:currentAuditor()};
+  const expected=currentSavedRecord;
+  const sameView=()=>document.getElementById('chkDate').value===dateStr&&selectedEmp()?.no===emp.no;
+  checklistBusy=true; updateChecklistControls();
+  document.getElementById('chkStatusPill').className='pill neutral';
+  document.getElementById('chkStatusPill').textContent='Menyimpan...';
+  try{
+    await persistChecklistRecord(dateStr,emp.no,record,expected,empGender(emp));
+    const no=Object.values(record.items).filter(v=>!v).length;
+    toast(`Tersimpan${FB?' di Firebase':IS_CLOUD?' di cloud':' di perangkat ini'}: ${emp.nama.split(',')[0]} — ${no} pelanggaran (${rupiah(no*DENDA)})`,'ok');
+    if(sameView()) renderChecklist();
+  }catch(e){
+    if(sameView()){
+      document.getElementById('chkStatusPill').className='pill no';
+      document.getElementById('chkStatusPill').textContent='Gagal disimpan — perubahan belum tersimpan';
+    }
+    toast(e.message||'Gagal menyimpan pemeriksaan. Coba lagi.','err');
+  }finally{ checklistBusy=false; updateChecklistControls(); }
 }
-function resetChecklist(){ Object.keys(current).forEach(k=>current[k]=true); renderChecklist0(); }
+function resetChecklist(){ if(checklistBusy) return; Object.keys(current).forEach(k=>current[k]=true); renderChecklist0(); }
 function renderChecklist0(){ // re-render keeping current
   const dateStr=document.getElementById('chkDate').value;
   const emp=selectedEmp(); if(!emp) return;
   Object.keys(current).forEach(id=>{ const row=document.getElementById('row-'+id); if(row) mark(id,current[id]); });
 }
 async function deleteChecklist(){
+  if(checklistBusy) return;
+  if(!currentAuditor()) { applyAuth(); return; }
   const dateStr=document.getElementById('chkDate').value, emp=selectedEmp();
-  const ok=await openConfirmModal('Hapus Checklist', 'Hapus checklist '+emp.nama+' tanggal '+dateStr+'?', 'Hapus');
-  if(!ok) return;
-  const rec=getRecords();
-  if(rec[dateStr]){ delete rec[dateStr][emp.no]; if(!Object.keys(rec[dateStr]).length) delete rec[dateStr]; }
-  setRecords(rec, dateStr); toast('Data dihapus','ok'); renderChecklist();
+  if(!dateStr||!emp||!currentSavedRecord) return;
+  const expected=currentSavedRecord;
+  if(!await openConfirmModal('Hapus Checklist','Hapus checklist '+emp.nama+' tanggal '+dateStr+'?','Hapus')) return;
+  if(checklistBusy) return;
+  checklistBusy=true; updateChecklistControls();
+  try{
+    await persistChecklistRecord(dateStr,emp.no,null,expected);
+    toast('Data pemeriksaan dihapus','ok');
+    if(document.getElementById('chkDate').value===dateStr&&selectedEmp()?.no===emp.no) renderChecklist();
+  }catch(e){ toast(e.message||'Gagal menghapus pemeriksaan. Coba lagi.','err'); }
+  finally{ checklistBusy=false; updateChecklistControls(); }
 }
 
 /* ================= AGREGASI ================= */
@@ -1029,12 +1103,28 @@ function monthData(ym){ // ym = 'YYYY-MM'
       const emp=EMPLOYEES.find(e=>e.no===+no); if(!emp) return;
       const viol=Object.entries(r.items).filter(([,v])=>v===false).map(([k])=>k);
       const labels=Object.fromEntries(recordItems(r,empGender(emp),new Date(date+'T12:00:00').getDay()).map(it=>[it.id,it.t]));
-      out.push({date, emp, viol, labels, note:r.note, auditor:r.auditor||''});
+      const descriptions=Object.fromEntries(recordItems(r,empGender(emp),new Date(date+'T12:00:00').getDay()).map(it=>[it.id,it.d||'']));
+      out.push({date, emp, viol, labels, descriptions, note:r.note, auditor:r.auditor||''});
     });
   });
   return out;
 }
 const ITEM_LABELS = {rambut:'Rambut/Kepala',telinga:'Anting-anting',leher:'Kalung',wajah:'Makeup',jam:'Jam Tangan',cincin:'Cincin',gigi:'Gigi',badan:'Parfum',seragam:'Seragam',celana:'Celana',sepatu:'Sepatu',nametag:'Nametag Rabu'};
+
+// Identitas dan nama historis disimpan terpisah; nama sama tidak menggabungkan ID berbeda.
+function violationKey(record,id){ return JSON.stringify([id,record.labels[id]||ITEM_LABELS[id]||id]); }
+function itemReportLabels(data){
+  const entries=new Map();
+  data.forEach(d=>d.viol.forEach(id=>entries.set(violationKey(d,id),{id,title:d.labels[id]||ITEM_LABELS[id]||id,description:d.descriptions[id]||''})));
+  const titleCounts=new Map(), displayCounts=new Map();
+  entries.forEach(x=>titleCounts.set(x.title,(titleCounts.get(x.title)||0)+1));
+  entries.forEach(x=>{x.display=x.title+(titleCounts.get(x.title)>1&&x.description?' — '+x.description:'');displayCounts.set(x.display,(displayCounts.get(x.display)||0)+1);});
+  const numbered=new Map();
+  return Object.fromEntries([...entries].map(([key,x])=>{
+    const n=(numbered.get(x.display)||0)+1; numbered.set(x.display,n);
+    return [key,x.display+(displayCounts.get(x.display)>1?' — Item '+n:'')];
+  }));
+}
 
 /* ================= DASHBOARD ================= */
 function renderDashboard(){
@@ -1042,7 +1132,6 @@ function renderDashboard(){
   const data=monthData(ym);
   const totalChecks=data.length;
   const totalViol=data.reduce((s,d)=>s+d.viol.length,0);
-  const totalItems=data.reduce((s,d)=>s+d.viol.length+Object.keys(ITEM_LABELS).length*0,0); // approx below
   const checkedEmp=new Set(data.map(d=>d.emp.no)).size;
   const clean=data.filter(d=>d.viol.length===0).length;
   const comp= totalChecks? Math.round(clean/totalChecks*100):0;
@@ -1055,12 +1144,12 @@ function renderDashboard(){
     <div class="stat green"><div class="big">${comp}%</div><div class="lbl">Pemeriksaan Tanpa Pelanggaran</div></div>`;
 
   // by item
-  const byItem=Object.create(null);
-  data.forEach(d=>d.viol.forEach(v=>{const label=d.labels[v]||ITEM_LABELS[v]||v; byItem[label]=(byItem[label]||0)+1;}));
+  const byItem=Object.create(null), reportLabels=itemReportLabels(data);
+  data.forEach(d=>d.viol.forEach(v=>{const key=violationKey(d,v); byItem[key]=(byItem[key]||0)+1;}));
   const itemsSorted=Object.entries(byItem).sort((a,b)=>b[1]-a[1]);
   const maxI=itemsSorted[0]?.[1]||1;
   document.getElementById('dashByItem').innerHTML = itemsSorted.length? itemsSorted.map(([k,v])=>
-    `<div class="bar-row"><div class="bl">${esc(k)}</div><div class="bar-track"><div class="bar-fill" style="width:${Math.max(8,v/maxI*100)}%">${v}</div></div></div>`).join('')
+    `<div class="bar-row"><div class="bl">${esc(reportLabels[k])}</div><div class="bar-track"><div class="bar-fill" style="width:${Math.max(8,v/maxI*100)}%">${v}</div></div></div>`).join('')
     : '<div class="empty-note"><div class="big-ico">🎉</div>Belum ada pelanggaran periode ini</div>';
 
   // by divisi
@@ -1084,13 +1173,13 @@ function renderDashboard(){
 
 /* ================= REKAP BULANAN ================= */
 function rekapRows(ym){
-  const data=monthData(ym);
+  const data=monthData(ym), itemLabels=itemReportLabels(data);
   const byEmp={};
-  activeEmployees().forEach(e=>byEmp[e.no]={emp:e,checks:0,viol:0,perItem:Object.create(null),notes:[]});
+  activeEmployees().forEach(e=>byEmp[e.no]={emp:e,checks:0,viol:0,perItem:Object.create(null),itemLabels,notes:[]});
   data.forEach(d=>{
-    byEmp[d.emp.no]=byEmp[d.emp.no]||{emp:d.emp,checks:0,viol:0,perItem:Object.create(null),notes:[]};
+    byEmp[d.emp.no]=byEmp[d.emp.no]||{emp:d.emp,checks:0,viol:0,perItem:Object.create(null),itemLabels,notes:[]};
     const b=byEmp[d.emp.no]; b.checks++; b.viol+=d.viol.length;
-    d.viol.forEach(v=>{const label=d.labels[v]||ITEM_LABELS[v]||v; b.perItem[label]=(b.perItem[label]||0)+1;});
+    d.viol.forEach(v=>{const key=violationKey(d,v); b.perItem[key]=(b.perItem[key]||0)+1;});
     if(d.note) b.notes.push(d.date.slice(8)+': '+d.note);
   });
   return Object.values(byEmp);
@@ -1112,7 +1201,7 @@ function renderRekap(){
   document.getElementById('rekapTbl').innerHTML=
     '<thead><tr><th>No</th><th>Nama</th><th>Divisi</th><th>Jabatan</th><th>Diperiksa</th><th>Pelanggaran</th><th>Detail Pelanggaran</th><th>Denda</th><th>Status</th></tr></thead><tbody>'+
     filtered.map(r=>{
-      const det=Object.entries(r.perItem).map(([k,v])=>`${esc(k)} (${v}×)`).join(', ')||'—';
+      const det=Object.entries(r.perItem).map(([k,v])=>`${esc(r.itemLabels[k])} (${v}×)`).join(', ')||'—';
       const st = r.checks===0?'<span class="pill neutral">Belum diperiksa</span>': r.viol===0?'<span class="pill ok">Bersih ✓</span>':'<span class="pill no">'+r.viol+' pelanggaran</span>';
       return `<tr><td>${r.emp.no}</td><td><b>${r.emp.nama}</b></td><td>${r.emp.divisi}</td><td>${r.emp.jabatan}</td><td>${r.checks}×</td><td>${r.viol}</td><td style="max-width:260px;font-size:11.5px">${det}</td><td class="denda-txt">${r.viol?rupiah(r.viol*DENDA):'—'}</td><td>${st}</td></tr>`;
     }).join('')+'</tbody>';
@@ -1132,15 +1221,16 @@ function exportExcel(){
     ['No','Nama Insan SSC','Divisi','Jabatan','Status','Jml Diperiksa','Jml Pelanggaran','Detail Pelanggaran','Total Denda (Rp)','Catatan']];
   rows.forEach(r=>{
     aoa.push([r.emp.no,r.emp.nama,r.emp.divisi,r.emp.jabatan,r.emp.status,r.checks,r.viol,
-      Object.entries(r.perItem).map(([k,v])=>`${k} (${v}x)`).join(', '), r.viol*DENDA, r.notes.join(' | ')]);
+      Object.entries(r.perItem).map(([k,v])=>`${r.itemLabels[k]} (${v}x)`).join(', '), r.viol*DENDA, r.notes.join(' | ')]);
   });
   const totV=rows.reduce((s,r)=>s+r.viol,0);
   aoa.push([],['','TOTAL','','','',rows.reduce((s,r)=>s+r.checks,0),totV,'',totV*DENDA]);
 
   // Sheet 2: Detail harian
   const det=[['Tanggal','No','Nama','Divisi','Titik Pelanggaran','Jml Pelanggaran','Denda (Rp)','Auditor','Catatan']];
-  monthData(ym).sort((a,b)=>a.date.localeCompare(b.date)||a.emp.no-b.emp.no).forEach(d=>{
-    det.push([d.date,d.emp.no,d.emp.nama,d.emp.divisi,d.viol.map(v=>d.labels[v]||ITEM_LABELS[v]||v).join(', ')||'-',d.viol.length,d.viol.length*DENDA,auditorName(d.auditor),d.note||'']);
+  const data=monthData(ym), reportLabels=itemReportLabels(data);
+  data.sort((a,b)=>a.date.localeCompare(b.date)||a.emp.no-b.emp.no).forEach(d=>{
+    det.push([d.date,d.emp.no,d.emp.nama,d.emp.divisi,d.viol.map(v=>reportLabels[violationKey(d,v)]).join(', ')||'-',d.viol.length,d.viol.length*DENDA,auditorName(d.auditor),d.note||'']);
   });
 
   const wb=XLSX.utils.book_new();
@@ -1348,7 +1438,8 @@ async function restoreEmployee(no){
       await loadMasterData();
       await new Promise((res,rej)=>{
         let first=true;
-        FB.collection('grooming').onSnapshot(snap=>{
+        FB.collection('grooming').onSnapshot({includeMetadataChanges:true},snap=>{
+          if(snap.metadata.hasPendingWrites) return;
           const rec={}; let gen={}; let itemSettings=[];
           snap.forEach(d=>{
             if(d.id==='meta-gender') gen=d.data()||{};
@@ -1356,7 +1447,7 @@ async function restoreEmployee(no){
             else if(d.id.indexOf('rec-')===0) rec[d.id.slice(4)]=d.data()||{};
           });
           CACHE.records=rec; CACHE.gender=gen; ITEM_SETTINGS=itemSettings;
-          cloudDot(false);
+          cloudDot(cloudBusy>0);
           if(first){ first=false; res(); } else refreshActive();
         }, err=>{ if(first){ first=false; rej(err); } });
       });

@@ -12,6 +12,9 @@ jobs:
       - name: Checkout kode
         uses: actions/checkout@v4
 
+      - name: Uji regresi checklist
+        run: node --test tests/checklist.test.cjs
+
       - name: Deploy ke Firebase Hosting (live)
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:

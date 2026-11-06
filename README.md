@@ -15,8 +15,13 @@ Aplikasi checklist grooming harian (audit CEO/COO) dengan penyimpanan Firebase F
 ## Pengaturan Data
 - **Data Karyawan SSC**: kelola data karyawan seperti sebelumnya.
 - **Item Pemeriksaan**: tambah, edit, dan hapus item. Item yang dihapus hilang dari daftar pengaturan dan pemeriksaan baru; penanda penghapusan disimpan agar item bawaan tidak muncul kembali dan riwayat tetap utuh. Item tambahan berlaku untuk semua hari dan jenis kelamin; item bawaan tetap mengikuti jadwal dan jenis kelamin kecuali keterangannya diganti.
-- Master item disimpan di dokumen Firestore `grooming/meta-items`, terpisah dari hasil pemeriksaan. Pembaruan menggunakan transaksi agar perubahan item berbeda dari beberapa perangkat tetap tersimpan.
+- Master item disimpan di dokumen Firestore `grooming/meta-items`, terpisah dari hasil pemeriksaan. Pembaruan menggunakan transaksi dan versi per item untuk mencegah form usang menimpa perubahan atau mengaktifkan kembali item yang sudah dihapus.
 - Pemeriksaan baru menyimpan salinan nama, keterangan, dan ketentuan item. Pemeriksaan lama tetap mengikuti ID item yang sudah tersimpan, tanpa menambahkan item baru secara otomatis. Dashboard, rekap, dan ekspor memakai nama dari riwayat pemeriksaan.
 
 ## Pemeriksaan lokal
-Jalankan `node tests/checklist.test.cjs` untuk memeriksa aturan harian, navigasi pengaturan, kompatibilitas riwayat lama, salinan item, total pelanggaran, dan penyimpanan master terpisah dengan mock Firestore. Pengujian ini tidak mengakses database produksi.
+Jalankan `node --test tests/checklist.test.cjs` untuk memeriksa aturan harian, navigasi pengaturan, kompatibilitas riwayat lama, salinan item, total pelanggaran, dan penyimpanan master terpisah dengan mock Firestore. Pengujian ini tidak mengakses database produksi.
+
+- Status pemeriksaan menjadi **Tersimpan** setelah penyimpanan dikonfirmasi. Kegagalan mempertahankan draft dan hasil lama. Transaksi per pemeriksaan mempertahankan data karyawan lain dan menolak konflik pemeriksaan yang sama.
+- Dashboard, rekap, dan Excel memisahkan item berdasarkan ID serta nama historis. Nama sama diberi pembeda keterangan / nomor item.
+- Jika semua item dihapus, checklist menampilkan petunjuk dan tombol Simpan dinonaktifkan; riwayat lama tetap dapat dibuka.
+- GitHub Actions menjalankan pengujian regresi sebelum deploy Hosting.
