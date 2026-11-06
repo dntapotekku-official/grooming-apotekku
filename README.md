@@ -14,7 +14,7 @@ Aplikasi checklist grooming harian (audit CEO/COO) dengan penyimpanan Firebase F
 
 ## Pengaturan Data
 - **Data Karyawan SSC**: kelola data karyawan seperti sebelumnya.
-- **Item Pemeriksaan**: tambah, edit, nonaktifkan, dan aktifkan kembali item. Item tambahan berlaku untuk semua hari dan jenis kelamin; item bawaan tetap mengikuti jadwal dan jenis kelamin kecuali keterangannya diganti.
+- **Item Pemeriksaan**: tambah, edit, dan hapus item. Item yang dihapus hilang dari daftar pengaturan dan pemeriksaan baru; penanda penghapusan disimpan agar item bawaan tidak muncul kembali dan riwayat tetap utuh. Item tambahan berlaku untuk semua hari dan jenis kelamin; item bawaan tetap mengikuti jadwal dan jenis kelamin kecuali keterangannya diganti.
 - Master item disimpan di dokumen Firestore `grooming/meta-items`, terpisah dari hasil pemeriksaan. Pembaruan menggunakan transaksi agar perubahan item berbeda dari beberapa perangkat tetap tersimpan.
 - Pemeriksaan baru menyimpan salinan nama, keterangan, dan ketentuan item. Pemeriksaan lama tetap mengikuti ID item yang sudah tersimpan, tanpa menambahkan item baru secara otomatis. Dashboard, rekap, dan ekspor memakai nama dari riwayat pemeriksaan.
 

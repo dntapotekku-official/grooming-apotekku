@@ -340,7 +340,7 @@ noscript .nojs-warn{display:block!important}
   </div>
   <div id="settings-items" class="card" hidden>
     <div class="flex-between" style="margin-bottom:12px">
-      <div><h2>Item Pemeriksaan</h2><div class="hint" style="margin:0">Kelola daftar centang untuk pemeriksaan baru. Item nonaktif dan perubahan nama tidak mengubah riwayat tersimpan.</div></div>
+      <div><h2>Item Pemeriksaan</h2><div class="hint" style="margin:0">Kelola daftar centang untuk pemeriksaan baru. Penghapusan item dan perubahan nama tidak mengubah riwayat tersimpan.</div></div>
       <button class="btn small" onclick="openItemModal()">+ Tambah Item</button>
     </div>
     <div class="tbl-wrap"><table id="itemTbl"></table></div>
@@ -673,7 +673,7 @@ function allMasterItems(){
   return [...defaultGroomingItems('P',3),...ITEM_SETTINGS.filter(x=>x.id.startsWith('custom_'))].map(it=>{
     const x=ITEM_SETTINGS.find(x=>x.id===it.id);
     return {...it,t:x?.t||it.t,d:x?.d||it.d,rule:x?.rule||it.rule,aktif:x?.aktif!==false};
-  });
+  }).filter(it=>it.aktif);
 }
 function showSettings(section){
   document.getElementById('settings-employees').hidden=section!=='employees';
@@ -685,12 +685,12 @@ function showSettings(section){
   if(section==='items') renderItemTable();
 }
 function renderItemTable(){
-  document.getElementById('itemTbl').innerHTML='<thead><tr><th>Item Pemeriksaan</th><th>Keterangan</th><th>Status</th><th>Tindakan</th></tr></thead><tbody>'+allMasterItems().map(it=>`<tr>
+  document.getElementById('itemTbl').innerHTML='<thead><tr><th>Item Pemeriksaan</th><th>Keterangan</th><th>Tindakan</th></tr></thead><tbody>'+allMasterItems().map(it=>`<tr>
     <td><b>${esc(it.t)}</b><br><small>${it.id.startsWith('custom_')?'Semua hari & jenis kelamin':it.id==='nametag'?'Khusus Rabu':'Aturan bawaan mengikuti hari / jenis kelamin'}</small></td>
     <td>${esc(ITEM_SETTINGS.find(x=>x.id===it.id)?.d|| (it.id.startsWith('custom_')?it.d:'Mengikuti aturan grooming bawaan'))}</td>
-    <td><span class="pill ${it.aktif?'ok':'neutral'}">${it.aktif?'Aktif':'Nonaktif'}</span></td>
-    <td><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn small ghost" onclick="openItemModal('${it.id}')">Edit</button><button class="btn small ghost" onclick="toggleItem('${it.id}')">${it.aktif?'Nonaktifkan':'Aktifkan'}</button></div></td>
+    <td><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn small ghost" onclick="openItemModal('${it.id}')">Edit</button><button class="btn small ghost" onclick="deleteItem('${it.id}')">Hapus</button></div></td>
   </tr>`).join('')+'</tbody>';
+  if(!allMasterItems().length) document.getElementById('itemTbl').innerHTML='<tbody><tr><td colspan="3" class="empty-note">Belum ada item pemeriksaan. Klik + Tambah Item untuk membuat daftar centang.</td></tr></tbody>';
 }
 function openItemModal(id=''){
   const it=allMasterItems().find(x=>x.id===id);
@@ -734,12 +734,12 @@ async function saveItemForm(ev){
   }catch(e){ const el=document.getElementById('itemError'); el.textContent=e.message||'Gagal menyimpan item. Coba lagi.'; el.className='modal-error show'; }
   finally{ btn.disabled=false; }
 }
-async function toggleItem(id){
+async function deleteItem(id){
   const it=allMasterItems().find(x=>x.id===id); if(!it) return;
-  const active=!it.aktif;
-  if(!await openConfirmModal(active?'Aktifkan Item':'Nonaktifkan Item', (active?'Aktifkan':'Nonaktifkan')+' '+it.t+' untuk pemeriksaan baru? Riwayat tersimpan tetap utuh.',active?'Aktifkan':'Nonaktifkan')) return;
-  try{ await writeItemSetting({id,aktif:active}); toast(active?'Item diaktifkan':'Item dinonaktifkan','ok'); }
-  catch(e){ toast(e.message||'Gagal memperbarui item','err'); }
+  if(!await openConfirmModal('Hapus Item Pemeriksaan', 'Hapus '+it.t+' dari daftar item dan pemeriksaan baru? Riwayat pemeriksaan yang sudah tersimpan tetap utuh.', 'Hapus')) return;
+  // Simpan penanda penghapusan agar item bawaan tidak muncul lagi dan riwayat tetap utuh.
+  try{ await writeItemSetting({id,aktif:false}); toast('Item pemeriksaan dihapus','ok'); }
+  catch(e){ toast(e.message||'Gagal menghapus item','err'); }
 }
 
 /* ================= TEBAK GENDER DARI NAMA ================= */
@@ -996,7 +996,7 @@ function saveChecklist(){
   if(!currentAuditor()) { applyAuth(); return toast('Silakan login sebagai auditor dulu','err'); }
   const dateStr=document.getElementById('chkDate').value, emp=selectedEmp();
   if(!dateStr||!emp) return toast('Pilih tanggal & karyawan dulu','err');
-  if(!currentDefinitions.length) return toast('Aktifkan minimal satu item pemeriksaan terlebih dahulu','err');
+  if(!currentDefinitions.length) return toast('Tambahkan minimal satu item pemeriksaan terlebih dahulu','err');
   const rec=getRecords();
   rec[dateStr]=rec[dateStr]||{};
   rec[dateStr][emp.no]={items:{...current}, itemDefinitions:currentDefinitions.map(({id,t,d,rule})=>({id,t,d,rule})), note:document.getElementById('chkNote').value.trim(), savedAt:Date.now(), auditor:currentAuditor()};
